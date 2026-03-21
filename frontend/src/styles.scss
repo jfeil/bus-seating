@@ -1,0 +1,200 @@
+/* You can add global styles to this file, and also import other style files */
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Dark theme overrides */
+body.dark-theme {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+
+  // Toolbar
+  .mat-toolbar.mat-primary {
+    background: #37474f;
+  }
+
+  // Cards
+  .mat-mdc-card {
+    --mdc-elevated-card-container-color: #2d2d2d;
+    --mdc-outlined-card-container-color: #2d2d2d;
+    --mat-card-subtitle-text-color: #aaa;
+    color: #e0e0e0 !important;
+  }
+
+  // Sidenav
+  .mat-sidenav {
+    background-color: #252525 !important;
+    color: #e0e0e0 !important;
+  }
+  .mat-sidenav-content {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+  }
+  .mat-mdc-list-item {
+    --mdc-list-list-item-label-text-color: #e0e0e0;
+    color: #e0e0e0 !important;
+  }
+  .active-link {
+    background: rgba(255, 255, 255, 0.18) !important;
+  }
+  .mat-mdc-list-item:hover .mdc-list-item__primary-text,
+  .mat-mdc-list-item:focus .mdc-list-item__primary-text {
+    color: #fff !important;
+  }
+  .mat-mdc-list-item:hover,
+  .mat-mdc-list-item:focus {
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  // Text fields
+  .mdc-text-field--filled:not(.mdc-text-field--disabled) {
+    background-color: #383838 !important;
+  }
+  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-text-field__input {
+    color: #e0e0e0 !important;
+  }
+  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label,
+  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label--float-above {
+    color: #aaa !important;
+  }
+  .mdc-text-field--filled .mdc-line-ripple::before {
+    border-bottom-color: #666 !important;
+  }
+  .mat-mdc-form-field-hint {
+    color: #999 !important;
+  }
+  textarea.mat-mdc-input-element {
+    color: #e0e0e0 !important;
+  }
+
+  // Select / Dropdown
+  .mat-mdc-select-value {
+    color: #e0e0e0 !important;
+  }
+  .mat-mdc-select-arrow {
+    color: #aaa !important;
+  }
+  .mat-mdc-option {
+    --mat-option-label-text-color: #e0e0e0;
+    color: #e0e0e0;
+  }
+  .mat-mdc-select-panel {
+    background: #383838 !important;
+  }
+
+  // Expansion panels
+  .mat-expansion-panel {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+  }
+  .mat-expansion-panel-header-title {
+    color: #e0e0e0 !important;
+  }
+  .mat-expansion-panel-header-description {
+    color: #aaa !important;
+  }
+  .mat-expansion-indicator::after {
+    color: #aaa !important;
+  }
+
+  // Tabs
+  .mat-mdc-tab:not(.mat-mdc-tab-disabled) .mdc-tab__text-label {
+    color: #aaa !important;
+  }
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+    color: #90caf9 !important;
+  }
+  .mat-mdc-tab-header {
+    border-bottom-color: #444 !important;
+  }
+
+  // Checkboxes & toggles
+  .mdc-checkbox .mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate):not([data-indeterminate=true]) ~ .mdc-checkbox__background {
+    border-color: #888 !important;
+  }
+  .mat-mdc-slide-toggle {
+    --mdc-switch-unselected-track-color: #555;
+    --mdc-switch-unselected-handle-color: #888;
+  }
+
+  // Buttons
+  .mat-mdc-button:not(:disabled),
+  .mat-mdc-icon-button:not(:disabled) {
+    --mdc-text-button-label-text-color: #e0e0e0;
+    color: #e0e0e0;
+  }
+
+  // Chips
+  .mat-mdc-chip {
+    --mdc-chip-label-text-color: #e0e0e0;
+  }
+
+  // Progress bar
+  mat-progress-bar {
+    --mdc-linear-progress-track-color: #444;
+  }
+
+  // Slider
+  .mat-mdc-slider {
+    --mdc-slider-inactive-track-color: #555;
+  }
+
+  // Divider
+  .mat-divider {
+    border-top-color: #444 !important;
+  }
+
+  // Seating plan group items (component styles)
+  .group-item {
+    background: #3a3a3a !important;
+    color: #e0e0e0 !important;
+  }
+  .group-item.instructor-group {
+    background: #1a3a5c !important;
+    border-left-color: #64b5f6 !important;
+  }
+
+  // Muted text classes
+  .subtitle, .member-count, .empty-state, .member, .empty, .reg-info {
+    color: #999 !important;
+  }
+
+  // Headings
+  h1, h2, h3, h4 {
+    color: #e0e0e0;
+  }
+
+  // Tooltips
+  .mat-mdc-tooltip .mdc-tooltip__surface {
+    background-color: #555 !important;
+    color: #fff !important;
+  }
+
+  // Scrollbar
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #2d2d2d;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+  }
+
+  // Icons in dark mode
+  .mat-icon {
+    color: #ccc;
+  }
+  .mat-mdc-raised-button .mat-icon,
+  .mat-toolbar .mat-icon {
+    color: inherit;
+  }
+  .instructor-badge, .instructor-icon {
+    color: #64b5f6 !important;
+  }
+  .small-icon {
+    color: #64b5f6 !important;
+  }
+}
