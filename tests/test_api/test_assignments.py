@@ -15,19 +15,26 @@ class TestFullWorkflow:
 
         g1 = client.post(f"/api/seasons/{sid}/groups", json={
             "name": "Familie Mueller",
-            "members": [{"name": "Hans"}, {"name": "Anna"}, {"name": "Max"}],
+            "members": [
+                {"first_name": "Hans", "last_name": "Mueller"},
+                {"first_name": "Anna", "last_name": "Mueller"},
+                {"first_name": "Max", "last_name": "Mueller"},
+            ],
             "register_for_days": [d1["id"], d2["id"]],
         }).json()
 
         g2 = client.post(f"/api/seasons/{sid}/groups", json={
             "name": "Familie Schmidt",
-            "members": [{"name": "Peter"}, {"name": "Lisa"}],
+            "members": [
+                {"first_name": "Peter", "last_name": "Schmidt"},
+                {"first_name": "Lisa", "last_name": "Schmidt"},
+            ],
             "register_for_days": [d1["id"], d2["id"]],
         }).json()
 
         g3 = client.post(f"/api/seasons/{sid}/groups", json={
             "name": "Instructor Team",
-            "members": [{"name": "Klaus", "person_type": "lehrteam"}],
+            "members": [{"first_name": "Klaus", "last_name": "Berger", "person_type": "lehrteam"}],
             "register_for_days": [d1["id"], d2["id"]],
         }).json()
 
@@ -169,10 +176,10 @@ class TestRidePreferences:
         season = client.post("/api/seasons", json={"name": "Test"}).json()
         sid = season["id"]
         g1 = client.post(f"/api/seasons/{sid}/groups", json={
-            "name": "G1", "members": [{"name": "A"}],
+            "name": "G1", "members": [{"first_name": "A", "last_name": "X"}],
         }).json()
         g2 = client.post(f"/api/seasons/{sid}/groups", json={
-            "name": "G2", "members": [{"name": "B"}],
+            "name": "G2", "members": [{"first_name": "B", "last_name": "Y"}],
         }).json()
 
         resp = client.post(f"/api/seasons/{sid}/ride-preferences", json={
@@ -188,10 +195,10 @@ class TestRidePreferences:
         season = client.post("/api/seasons", json={"name": "Test"}).json()
         sid = season["id"]
         g1 = client.post(f"/api/seasons/{sid}/groups", json={
-            "name": "G1", "members": [{"name": "A"}],
+            "name": "G1", "members": [{"first_name": "A", "last_name": "X"}],
         }).json()
         g2 = client.post(f"/api/seasons/{sid}/groups", json={
-            "name": "G2", "members": [{"name": "B"}],
+            "name": "G2", "members": [{"first_name": "B", "last_name": "Y"}],
         }).json()
 
         pref = client.post(f"/api/seasons/{sid}/ride-preferences", json={
@@ -211,7 +218,10 @@ class TestPdfExport:
         client.post(f"/api/seasons/{sid}/days/{d1['id']}/buses", json={"name": "Bus A", "capacity": 50})
         client.post(f"/api/seasons/{sid}/groups", json={
             "name": "Familie Mueller",
-            "members": [{"name": "Hans"}, {"name": "Anna"}],
+            "members": [
+                {"first_name": "Hans", "last_name": "Mueller"},
+                {"first_name": "Anna", "last_name": "Mueller"},
+            ],
             "register_for_days": [d1["id"]],
         })
         client.post(f"/api/seasons/{sid}/solve")

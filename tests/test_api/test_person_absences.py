@@ -8,7 +8,10 @@ class TestPersonAbsences:
             f"/api/seasons/{sid}/groups",
             json={
                 "name": "Family",
-                "members": [{"name": "Alice"}, {"name": "Bob"}],
+                "members": [
+                    {"first_name": "Alice", "last_name": "Smith"},
+                    {"first_name": "Bob", "last_name": "Jones"},
+                ],
                 "register_for_days": [day["id"]],
             },
         ).json()
@@ -25,7 +28,7 @@ class TestPersonAbsences:
         data = resp.json()
         assert data["person_id"] == person["id"]
         assert data["ski_day_id"] == day["id"]
-        assert data["person_name"] == person["name"]
+        assert data["person_name"] == f"{person['first_name']} {person['last_name']}"
         assert data["day_name"] == "Day 1"
 
     def test_list_absences(self, client):
@@ -85,7 +88,7 @@ class TestPersonAbsences:
         plan = client.get(f"/api/seasons/{sid}/days/{day['id']}/seating-plan").json()
         members_after = plan[0]["groups"][0]["members"]
         assert len(members_after) == 1
-        assert members_after[0]["person_name"] == "Bob"
+        assert members_after[0]["person_first_name"] == "Bob"
 
 
 class TestSolverWithAbsences:
@@ -100,7 +103,11 @@ class TestSolverWithAbsences:
             f"/api/seasons/{sid}/groups",
             json={
                 "name": "Trio",
-                "members": [{"name": "A"}, {"name": "B"}, {"name": "C"}],
+                "members": [
+                    {"first_name": "A", "last_name": "X"},
+                    {"first_name": "B", "last_name": "Y"},
+                    {"first_name": "C", "last_name": "Z"},
+                ],
                 "register_for_days": [day["id"]],
             },
         ).json()

@@ -57,7 +57,7 @@ class TestCsvImport:
         # Verify absences
         absences = client.get(f"/api/seasons/{sid}/person-absences").json()
         assert len(absences) == 1
-        anna = next(m for m in bus_group["members"] if m["name"] == "Anna Mueller")
+        anna = next(m for m in bus_group["members"] if m["first_name"] == "Anna")
         assert absences[0]["person_id"] == anna["id"]
 
     def test_import_with_multiple_groups(self, client):

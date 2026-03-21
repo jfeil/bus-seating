@@ -10,7 +10,6 @@
     "devUrl": "http://localhost:4200"
   },
   "app": {
-    "title": "Bus Seating Planner",
     "windows": [
       {
         "title": "Bus Seating Planner",
