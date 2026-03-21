@@ -396,7 +396,7 @@ export class GroupListComponent implements OnInit {
   // --- Person Preferences ---
 
   filterPersons(query: string | null): Person[] {
-    const all = this.allPersons();
+    const all = this.allPersons;
     if (!query || typeof query !== 'string') return all;
     const lower = query.toLowerCase();
     return all.filter(p =>
@@ -407,7 +407,7 @@ export class GroupListComponent implements OnInit {
 
   displayPerson(personId: string): string {
     if (!personId) return '';
-    const person = this.allPersons().find(p => p.id === personId);
+    const person = this.allPersons.find(p => p.id === personId);
     return person ? person.name : '';
   }
 

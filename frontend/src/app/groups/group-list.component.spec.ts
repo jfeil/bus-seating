@@ -32,6 +32,15 @@ describe('GroupListComponent', () => {
     ]);
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+  }
+
+  function flushReload() {
+    httpMock.expectOne('/api/seasons/s1/groups').flush([]);
+    httpMock.expectOne('/api/seasons/s1/days').flush([]);
+    httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
+    httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
   }
 
   it('should load groups, days, registrations, and preferences on init', fakeAsync(() => {
@@ -44,6 +53,7 @@ describe('GroupListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/days').flush([]);
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
     tick();
 
     expect(fixture.componentInstance.groups().length).toBe(1);
@@ -70,11 +80,7 @@ describe('GroupListComponent', () => {
     req.flush({ id: 'g2', season_id: 's1', name: 'Test Group', members: [] });
     tick();
 
-    // Reload triggers
-    httpMock.expectOne('/api/seasons/s1/groups').flush([]);
-    httpMock.expectOne('/api/seasons/s1/days').flush([]);
-    httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
-    httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    flushReload();
     tick();
 
     expect(fixture.componentInstance.newGroupName).toBe('');
@@ -120,7 +126,6 @@ describe('GroupListComponent', () => {
     fixture.componentInstance.csvDays.add('d1');
     fixture.componentInstance.importCsv();
 
-    // Should create 2 groups: Family A (2 members) and Ski School (1 member)
     const reqs = httpMock.match(r => r.method === 'POST' && r.url === '/api/seasons/s1/groups');
     expect(reqs.length).toBe(2);
 
@@ -131,16 +136,12 @@ describe('GroupListComponent', () => {
     const schoolReq = reqs.find(r => r.request.body.name === 'Ski School');
     expect(schoolReq!.request.body.members[0].is_instructor).toBe(true);
 
-    // Flush creates — only the last one triggers reload
     familyReq!.flush({ id: 'g1', season_id: 's1', name: 'Family A', members: [] });
     tick();
     schoolReq!.flush({ id: 'g2', season_id: 's1', name: 'Ski School', members: [] });
     tick();
 
-    httpMock.expectOne('/api/seasons/s1/groups').flush([]);
-    httpMock.expectOne('/api/seasons/s1/days').flush([]);
-    httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
-    httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    flushReload();
     tick();
 
     expect(fixture.componentInstance.csvText).toBe('');
@@ -157,6 +158,7 @@ describe('GroupListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/days').flush([]);
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
     tick();
 
     fixture.componentInstance.prefGroupA = 'g1';
@@ -174,6 +176,7 @@ describe('GroupListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([
       { id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' },
     ]);
+    httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
     tick();
 
     expect(fixture.componentInstance.preferences().length).toBe(1);
@@ -207,6 +210,7 @@ describe('GroupListComponent', () => {
       { id: 'r1', group_id: 'g1', ski_day_id: 'd1' },
     ]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
     tick();
 
     const dayNames = fixture.componentInstance.getGroupDayNames('g1');

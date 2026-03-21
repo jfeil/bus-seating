@@ -89,7 +89,7 @@ export class SeasonListComponent implements OnInit {
   }
 
   open(season: Season) {
-    this.router.navigate(['/seasons', season.id, 'days']);
+    this.router.navigate(['/seasons', season.id, 'groups']);
   }
 
   remove(season: Season, event: Event) {

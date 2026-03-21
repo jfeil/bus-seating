@@ -8,7 +8,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private base = '/api';
+  private base = (window as any).__TAURI__ ? 'http://127.0.0.1:8000/api' : '/api';
 
   constructor(private http: HttpClient) {}
 

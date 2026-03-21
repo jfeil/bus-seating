@@ -13,9 +13,9 @@ export const routes: Routes = [
     path: 'seasons/:seasonId',
     component: SeasonDetailComponent,
     children: [
-      { path: '', redirectTo: 'days', pathMatch: 'full' },
-      { path: 'days', component: DayListComponent },
+      { path: '', redirectTo: 'groups', pathMatch: 'full' },
       { path: 'groups', component: GroupListComponent },
+      { path: 'days', component: DayListComponent },
       { path: 'config', component: ConstraintConfigComponent },
       { path: 'solve', component: SolverPanelComponent },
     ],

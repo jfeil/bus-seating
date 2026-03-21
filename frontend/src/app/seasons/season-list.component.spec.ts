@@ -82,7 +82,7 @@ describe('SeasonListComponent', () => {
     tick();
 
     fixture.componentInstance.open({ id: 'abc', name: 'Test' });
-    expect(router.navigate).toHaveBeenCalledWith(['/seasons', 'abc', 'days']);
+    expect(router.navigate).toHaveBeenCalledWith(['/seasons', 'abc', 'groups']);
   }));
 
   it('should show empty state when no seasons', fakeAsync(() => {

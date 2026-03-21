@@ -27,13 +27,13 @@ import { ThemeService } from '../core/theme.service';
     <mat-sidenav-container class="layout">
       <mat-sidenav mode="side" opened class="sidenav">
         <mat-nav-list>
-          <a mat-list-item routerLink="days" routerLinkActive="active-link">
-            <mat-icon matListItemIcon>calendar_today</mat-icon>
-            <span matListItemTitle>Days & Buses</span>
-          </a>
           <a mat-list-item routerLink="groups" routerLinkActive="active-link">
             <mat-icon matListItemIcon>groups</mat-icon>
             <span matListItemTitle>Groups & People</span>
+          </a>
+          <a mat-list-item routerLink="days" routerLinkActive="active-link">
+            <mat-icon matListItemIcon>calendar_today</mat-icon>
+            <span matListItemTitle>Days & Buses</span>
           </a>
           <a mat-list-item routerLink="config" routerLinkActive="active-link">
             <mat-icon matListItemIcon>tune</mat-icon>
