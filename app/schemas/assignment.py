@@ -53,5 +53,7 @@ class SeatingPlanGroup(BaseModel):
 
 class SeatingPlanPerson(BaseModel):
     person_id: str
-    person_name: str
-    is_instructor: bool
+    person_first_name: str
+    person_last_name: str
+    person_type: str
+    birth_year: int | None = None

@@ -1,232 +1,88 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
 
+// Define light and dark themes using Angular Material's native theming
+$light-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
+  ),
+));
+
+$dark-theme: mat.define-theme((
+  color: (
+    theme-type: dark,
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
+  ),
+));
+
+// Apply light theme globally
+html {
+  @include mat.all-component-themes($light-theme);
+  color-scheme: light;
+}
+
+// Apply dark theme when toggled
+.dark-theme {
+  @include mat.all-component-colors($dark-theme);
+  color-scheme: dark;
+}
+
+// --- Global resets ---
 html, body { height: 100%; margin: 0; }
 body { font-family: Roboto, "Helvetica Neue", sans-serif; }
 
-/* Dark theme overrides */
-body.dark-theme {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
+// --- App-specific styles (not covered by Material theming) ---
 
-  // Toolbar
-  .mat-toolbar.mat-primary {
-    background: #37474f;
-  }
+// Active sidenav link highlight
+.dark-theme .active-link {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
 
-  // Cards
-  .mat-mdc-card {
-    --mdc-elevated-card-container-color: #2d2d2d;
-    --mdc-outlined-card-container-color: #2d2d2d;
-    --mat-card-subtitle-text-color: #aaa;
-    color: #e0e0e0 !important;
-  }
+// Seating plan group items
+.group-item {
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+.group-item.instructor-group {
+  background: #e3f2fd;
+  border-left: 3px solid #1976d2;
+}
 
-  // Sidenav
-  .mat-sidenav-container {
-    background-color: #1e1e1e !important;
-  }
-  .mat-sidenav {
-    background-color: #252525 !important;
-    color: #e0e0e0 !important;
-  }
-  .mat-sidenav-content {
-    background-color: #1e1e1e !important;
-    color: #e0e0e0 !important;
-  }
-  .mat-mdc-list-item {
-    --mdc-list-list-item-label-text-color: #e0e0e0;
-    color: #e0e0e0 !important;
-  }
-  .active-link {
-    background: rgba(255, 255, 255, 0.18) !important;
-  }
-  .mat-mdc-list-item:hover .mdc-list-item__primary-text,
-  .mat-mdc-list-item:focus .mdc-list-item__primary-text {
-    color: #fff !important;
-  }
-  .mat-mdc-list-item:hover,
-  .mat-mdc-list-item:focus {
-    background: rgba(255, 255, 255, 0.12) !important;
-  }
-
-  // Text fields
-  .mdc-text-field--filled:not(.mdc-text-field--disabled) {
-    background-color: #383838 !important;
-  }
-  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-text-field__input {
-    color: #e0e0e0 !important;
-  }
-  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label,
-  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label--float-above {
-    color: #aaa !important;
-  }
-  .mdc-text-field--filled .mdc-line-ripple::before {
-    border-bottom-color: #666 !important;
-  }
-  .mat-mdc-form-field-hint {
-    color: #999 !important;
-  }
-  textarea.mat-mdc-input-element {
-    color: #e0e0e0 !important;
-  }
-
-  // Select / Dropdown
-  .mat-mdc-select-value {
-    color: #e0e0e0 !important;
-  }
-  .mat-mdc-select-arrow {
-    color: #aaa !important;
-  }
-  .mat-mdc-option {
-    --mat-option-label-text-color: #e0e0e0;
-    color: #e0e0e0;
-  }
-  .mat-mdc-select-panel,
-  .mat-mdc-autocomplete-panel {
-    background: #383838 !important;
-  }
-
-  // Expansion panels
-  .mat-expansion-panel {
-    background: #2d2d2d !important;
-    color: #e0e0e0 !important;
-  }
-  .mat-expansion-panel-header-title {
-    color: #e0e0e0 !important;
-  }
-  .mat-expansion-panel-header-description {
-    color: #aaa !important;
-  }
-  .mat-expansion-indicator::after {
-    color: #aaa !important;
-  }
-  .mat-action-row {
-    border-top-color: #444 !important;
-  }
-
-  // Tabs
-  .mat-mdc-tab:not(.mat-mdc-tab-disabled) .mdc-tab__text-label {
-    color: #aaa !important;
-  }
-  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
-    color: #90caf9 !important;
-  }
-  .mat-mdc-tab-header {
-    border-bottom-color: #444 !important;
-  }
-
-  // Checkboxes & toggles
-  .mdc-checkbox .mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate):not([data-indeterminate=true]) ~ .mdc-checkbox__background {
-    border-color: #888 !important;
-  }
-  .mat-mdc-slide-toggle {
-    --mdc-switch-unselected-track-color: #555;
-    --mdc-switch-unselected-handle-color: #888;
-  }
-
-  // Buttons — use CSS custom properties for reliable dark mode
-  .mat-mdc-button,
-  .mat-mdc-icon-button,
-  .mat-mdc-outlined-button {
-    --mdc-text-button-label-text-color: #e0e0e0;
-    --mat-text-button-state-layer-color: #e0e0e0;
-  }
-  .mat-mdc-button.mat-warn {
-    --mdc-text-button-label-text-color: #ef9a9a;
-  }
-  .mat-mdc-button.mat-primary {
-    --mdc-text-button-label-text-color: #90caf9;
-  }
-
-  // Raised buttons
-  .mat-mdc-raised-button {
-    --mdc-protected-button-label-text-color: #fff;
-    --mdc-protected-button-container-color: #505050;
-  }
-  .mat-mdc-raised-button.mat-primary {
-    --mdc-protected-button-container-color: #1976d2;
-    --mdc-protected-button-label-text-color: #fff;
-  }
-  .mat-mdc-raised-button.mat-accent {
-    --mdc-protected-button-container-color: #9c27b0;
-    --mdc-protected-button-label-text-color: #fff;
-  }
-  .mat-mdc-raised-button.mat-warn {
-    --mdc-protected-button-container-color: #d32f2f;
-    --mdc-protected-button-label-text-color: #fff;
-  }
-
-  // Flat / unelevated buttons
-  .mat-mdc-unelevated-button {
-    --mdc-filled-button-label-text-color: #fff;
-    --mdc-filled-button-container-color: #505050;
-  }
-  .mat-mdc-unelevated-button.mat-primary {
-    --mdc-filled-button-container-color: #1976d2;
-    --mdc-filled-button-label-text-color: #fff;
-  }
-  .mat-mdc-unelevated-button.mat-accent {
-    --mdc-filled-button-container-color: #9c27b0;
-    --mdc-filled-button-label-text-color: #fff;
-  }
-  .mat-mdc-unelevated-button.mat-warn {
-    --mdc-filled-button-container-color: #d32f2f;
-    --mdc-filled-button-label-text-color: #fff;
-  }
-
-  // FAB buttons
-  .mat-mdc-fab, .mat-mdc-mini-fab {
-    --mdc-fab-container-color: #505050;
-    --mat-fab-foreground-color: #fff;
-  }
-
-  // Chips
-  .mat-mdc-chip {
-    --mdc-chip-label-text-color: #e0e0e0;
-  }
-
-  // Progress bar
-  mat-progress-bar {
-    --mdc-linear-progress-track-color: #444;
-  }
-
-  // Slider
-  .mat-mdc-slider {
-    --mdc-slider-inactive-track-color: #555;
-  }
-
-  // Divider
-  .mat-divider {
-    border-top-color: #444 !important;
-  }
-
-  // Seating plan group items (component styles)
+.dark-theme {
   .group-item {
-    background: #3a3a3a !important;
-    color: #e0e0e0 !important;
+    background: #3a3a3a;
   }
   .group-item.instructor-group {
-    background: #1a3a5c !important;
-    border-left-color: #64b5f6 !important;
+    background: #1a3a5c;
+    border-left-color: #64b5f6;
   }
+}
 
-  // Muted text classes
-  .subtitle, .member-count, .empty-state, .member, .empty, .reg-info {
-    color: #999 !important;
+// Instructor icon accents
+.instructor-badge, .instructor-icon, .small-icon {
+  color: #1976d2;
+}
+.dark-theme {
+  .instructor-badge, .instructor-icon, .small-icon {
+    color: #64b5f6;
   }
+}
 
-  // Headings
-  h1, h2, h3, h4 {
-    color: #e0e0e0;
+// Muted text
+.subtitle, .member-count, .empty-state, .empty, .reg-info {
+  color: rgba(0, 0, 0, 0.54);
+}
+.dark-theme {
+  .subtitle, .member-count, .empty-state, .empty, .reg-info {
+    color: rgba(255, 255, 255, 0.5);
   }
+}
 
-  // Tooltips
-  .mat-mdc-tooltip .mdc-tooltip__surface {
-    background-color: #555 !important;
-    color: #fff !important;
-  }
-
-  // Scrollbar
+// Scrollbar styling for dark mode
+.dark-theme {
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -237,20 +93,5 @@ body.dark-theme {
   ::-webkit-scrollbar-thumb {
     background: #555;
     border-radius: 4px;
-  }
-
-  // Icons in dark mode
-  .mat-icon {
-    color: #ccc;
-  }
-  .mat-mdc-raised-button .mat-icon,
-  .mat-toolbar .mat-icon {
-    color: inherit;
-  }
-  .instructor-badge, .instructor-icon {
-    color: #64b5f6 !important;
-  }
-  .small-icon {
-    color: #64b5f6 !important;
   }
 }

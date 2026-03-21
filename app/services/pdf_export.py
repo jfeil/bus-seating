@@ -4,7 +4,7 @@ from fpdf import FPDF
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.db import Assignment, Bus, Group, Registration, Season, SkiDay
+from app.models.db import Assignment, Bus, Group, PersonAbsence, Registration, Season, SkiDay
 
 
 def generate_seating_pdf(db: Session, season_id: str) -> BytesIO:
@@ -44,10 +44,23 @@ def generate_seating_pdf(db: Session, season_id: str) -> BytesIO:
             )
         ).all()
 
+        # Load absent person IDs for this day
+        absent_ids = set(db.scalars(
+            select(PersonAbsence.person_id)
+            .where(PersonAbsence.ski_day_id == day.id)
+        ).all())
+
+        TYPE_LABELS = {"lehrteam": "Lehrteam", "skikurs": "Skikurs"}
+
         for bus in buses:
-            occupancy = sum(
-                len(a.registration.group.members) for a in bus.assignments
-            )
+            # Collect all present members across all groups in this bus
+            all_present = []
+            for assignment in bus.assignments:
+                group = assignment.registration.group
+                for m in group.members:
+                    if m.id not in absent_ids:
+                        all_present.append(m)
+
             effective = bus.capacity - bus.reserved_seats
 
             pdf.set_font("Helvetica", "B", 12)
@@ -55,42 +68,40 @@ def generate_seating_pdf(db: Session, season_id: str) -> BytesIO:
             pdf.set_text_color(255, 255, 255)
             pdf.cell(
                 0, 8,
-                f"  {bus.name}    ({occupancy}/{effective} seats)",
+                f"  {bus.name}    ({len(all_present)}/{effective} seats)",
                 fill=True, new_x="LMARGIN", new_y="NEXT",
             )
             pdf.set_text_color(0, 0, 0)
             pdf.ln(2)
 
-            assignments_sorted = sorted(
-                bus.assignments,
-                key=lambda a: (not any(m.is_instructor for m in a.registration.group.members), a.registration.group.name),
+            # Sort: instructors first, then by last name
+            members_sorted = sorted(
+                all_present,
+                key=lambda m: (not m.is_instructor, m.last_name.lower(), m.first_name.lower()),
             )
 
-            for assignment in assignments_sorted:
-                group = assignment.registration.group
-                is_instructor_group = any(m.is_instructor for m in group.members)
+            # Print with a separator between instructors and others
+            printed_separator = False
+            for member in members_sorted:
+                if not member.is_instructor and not printed_separator and any(m.is_instructor for m in members_sorted):
+                    pdf.ln(1)
+                    pdf.set_draw_color(200, 200, 200)
+                    pdf.line(pdf.get_x() + 5, pdf.get_y(), pdf.get_x() + pdf.epw - 5, pdf.get_y())
+                    pdf.ln(1)
+                    printed_separator = True
 
-                pdf.set_font("Helvetica", "B", 10)
-                prefix = "[Instructor] " if is_instructor_group else ""
+                type_tag = f"  [{TYPE_LABELS[member.person_type]}]" if member.person_type in TYPE_LABELS else ""
+                birth_tag = f"  (*{member.birth_year})" if member.birth_year else ""
+                pdf.set_font("Helvetica", "B" if member.is_instructor else "", 9)
                 pdf.cell(
-                    0, 6,
-                    f"  {prefix}{group.name} ({len(group.members)} members)",
+                    0, 5,
+                    f"    {member.last_name}, {member.first_name}{type_tag}{birth_tag}",
                     new_x="LMARGIN", new_y="NEXT",
                 )
 
-                pdf.set_font("Helvetica", "", 9)
-                members_sorted = sorted(group.members, key=lambda m: m.name)
-                for member in members_sorted:
-                    suffix = "  *" if member.is_instructor else ""
-                    pdf.cell(
-                        0, 5,
-                        f"      {member.name}{suffix}",
-                        new_x="LMARGIN", new_y="NEXT",
-                    )
+            pdf.ln(2)
 
-                pdf.ln(2)
-
-            if not bus.assignments:
+            if not all_present and not bus.assignments:
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.set_text_color(150, 150, 150)
                 pdf.cell(0, 6, "  No groups assigned", new_x="LMARGIN", new_y="NEXT")

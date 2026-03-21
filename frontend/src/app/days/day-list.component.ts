@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { ApiService } from '../core/api.service';
-import { SkiDay, Bus } from '../core/models';
+import { SkiDay, Bus, Group, Registration, PersonAbsence } from '../core/models';
 
 @Component({
   selector: 'app-day-list',
@@ -38,6 +38,14 @@ import { SkiDay, Bus } from '../core/models';
           <mat-card-title>{{ day.name }}</mat-card-title>
           <mat-card-subtitle>{{ day.date || 'No date set' }}</mat-card-subtitle>
           <span class="spacer"></span>
+          <div class="capacity-summary">
+            <mat-icon [class]="capacityClass(day.id)">{{ capacityIcon(day.id) }}</mat-icon>
+            <span [class]="capacityClass(day.id)">
+              {{ getAttendees(day.id) }} attendees /
+              {{ getTotalCapacity(day.id) }} seats
+              ({{ getAvailableSeats(day.id) >= 0 ? '+' : '' }}{{ getAvailableSeats(day.id) }} free)
+            </span>
+          </div>
           <button mat-icon-button color="warn" (click)="removeDay(day)">
             <mat-icon>delete</mat-icon>
           </button>
@@ -94,6 +102,10 @@ import { SkiDay, Bus } from '../core/models';
     .day-card { margin-bottom: 1rem; }
     mat-card-header { display: flex; align-items: center; }
     .spacer { flex: 1; }
+    .capacity-summary { display: flex; align-items: center; gap: 0.25rem; font-size: 0.9em; margin-right: 0.5rem; white-space: nowrap; }
+    .cap-ok { color: #4caf50; }
+    .cap-tight { color: #ff9800; }
+    .cap-over { color: #f44336; }
     .bus-list { margin-bottom: 0.5rem; }
     .bus-item, .add-bus-form { display: flex; gap: 0.5rem; align-items: baseline; }
     .bus-field { flex: 1; }
@@ -104,6 +116,9 @@ export class DayListComponent implements OnInit {
   seasonId = '';
   days = signal<SkiDay[]>([]);
   busesMap = signal<Record<string, Bus[]>>({});
+  groups = signal<Group[]>([]);
+  registrations = signal<Registration[]>([]);
+  absences = signal<PersonAbsence[]>([]);
 
   newDayName = '';
   newDayDate = '';
@@ -115,14 +130,17 @@ export class DayListComponent implements OnInit {
 
   ngOnInit() {
     this.seasonId = this.route.parent!.snapshot.params['seasonId'];
-    this.loadDays();
+    this.loadAll();
   }
 
-  loadDays() {
+  loadAll() {
     this.api.getDays(this.seasonId).subscribe(days => {
       this.days.set(days);
       days.forEach(d => this.loadBuses(d.id));
     });
+    this.api.getGroups(this.seasonId).subscribe(g => this.groups.set(g));
+    this.api.getRegistrations(this.seasonId).subscribe(r => this.registrations.set(r));
+    this.api.getPersonAbsences(this.seasonId).subscribe(a => this.absences.set(a));
   }
 
   loadBuses(dayId: string) {
@@ -140,13 +158,13 @@ export class DayListComponent implements OnInit {
     this.api.createDay(this.seasonId, name, this.newDayDate || undefined).subscribe(() => {
       this.newDayName = '';
       this.newDayDate = '';
-      this.loadDays();
+      this.loadAll();
     });
   }
 
   removeDay(day: SkiDay) {
     if (confirm(`Delete "${day.name}"?`)) {
-      this.api.deleteDay(this.seasonId, day.id).subscribe(() => this.loadDays());
+      this.api.deleteDay(this.seasonId, day.id).subscribe(() => this.loadAll());
     }
   }
 
@@ -176,5 +194,43 @@ export class DayListComponent implements OnInit {
 
   removeBus(dayId: string, busId: string) {
     this.api.deleteBus(this.seasonId, dayId, busId).subscribe(() => this.loadBuses(dayId));
+  }
+
+  // --- Capacity overview ---
+
+  getAttendees(dayId: string): number {
+    const groupIds = this.registrations()
+      .filter(r => r.ski_day_id === dayId)
+      .map(r => r.group_id);
+    const absentOnDay = new Set(
+      this.absences().filter(a => a.ski_day_id === dayId).map(a => a.person_id),
+    );
+    return this.groups()
+      .filter(g => groupIds.includes(g.id))
+      .reduce((sum, g) => sum + g.members.filter(m => !absentOnDay.has(m.id)).length, 0);
+  }
+
+  getTotalCapacity(dayId: string): number {
+    return this.getBuses(dayId).reduce((sum, b) => sum + b.capacity - b.reserved_seats, 0);
+  }
+
+  getAvailableSeats(dayId: string): number {
+    return this.getTotalCapacity(dayId) - this.getAttendees(dayId);
+  }
+
+  capacityClass(dayId: string): string {
+    const free = this.getAvailableSeats(dayId);
+    const total = this.getTotalCapacity(dayId);
+    if (free < 0) return 'cap-over';
+    if (total > 0 && free / total < 0.1) return 'cap-tight';
+    return 'cap-ok';
+  }
+
+  capacityIcon(dayId: string): string {
+    const free = this.getAvailableSeats(dayId);
+    const total = this.getTotalCapacity(dayId);
+    if (free < 0) return 'error';
+    if (total > 0 && free / total < 0.1) return 'warning';
+    return 'check_circle';
   }
 }

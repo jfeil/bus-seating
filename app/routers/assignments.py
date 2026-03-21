@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.models.db import Assignment, Bus, Group, Registration, Season, SkiDay
+from app.models.db import Assignment, Bus, Group, Person, PersonAbsence, Registration, Season, SkiDay
 from app.schemas.assignment import (
     AssignmentOverride,
     AssignmentRead,
@@ -139,23 +139,32 @@ def get_seating_plan(season_id: str, day_id: str, db: Session = Depends(get_db))
         )
     ).all()
 
+    # Load absent person IDs for this day
+    absent_person_ids = set(db.scalars(
+        select(PersonAbsence.person_id)
+        .where(PersonAbsence.ski_day_id == day_id)
+    ).all())
+
     plan = []
     for bus in buses:
         groups = []
         for assignment in bus.assignments:
             group = assignment.registration.group
+            present_members = [m for m in group.members if m.id not in absent_person_ids]
             groups.append(SeatingPlanGroup(
                 group_id=group.id,
                 group_name=group.name,
                 assignment_id=assignment.id,
-                is_instructor_group=any(m.is_instructor for m in group.members),
+                is_instructor_group=any(m.is_instructor for m in present_members),
                 members=[
                     SeatingPlanPerson(
                         person_id=m.id,
-                        person_name=m.name,
-                        is_instructor=m.is_instructor,
+                        person_first_name=m.first_name,
+                        person_last_name=m.last_name,
+                        person_type=m.person_type,
+                        birth_year=m.birth_year,
                     )
-                    for m in group.members
+                    for m in present_members
                 ],
             ))
         plan.append(SeatingPlanEntry(

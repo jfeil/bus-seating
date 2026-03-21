@@ -27,8 +27,8 @@ describe('SeatingGraphComponent', () => {
   it('should render nodes for groups', () => {
     const fixture = TestBed.createComponent(SeatingGraphComponent);
     fixture.componentInstance.groups = [
-      { id: 'g1', season_id: 's1', name: 'Group 1', members: [{ id: 'p1', name: 'A', is_instructor: false, group_id: 'g1' }] },
-      { id: 'g2', season_id: 's1', name: 'Group 2', members: [{ id: 'p2', name: 'B', is_instructor: true, group_id: 'g2' }] },
+      { id: 'g1', season_id: 's1', name: 'Group 1', members: [{ id: 'p1', first_name: 'A', last_name: 'X', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g1' }] },
+      { id: 'g2', season_id: 's1', name: 'Group 2', members: [{ id: 'p2', first_name: 'B', last_name: 'Y', person_type: 'lehrteam' as const, birth_year: null, group_id: 'g2' }] },
     ];
     fixture.componentInstance.seatingPlan = [{
       bus_name: 'A', bus_id: 'b1', capacity: 50, reserved_seats: 0,
@@ -43,8 +43,8 @@ describe('SeatingGraphComponent', () => {
   it('should render preference links', () => {
     const fixture = TestBed.createComponent(SeatingGraphComponent);
     fixture.componentInstance.groups = [
-      { id: 'g1', season_id: 's1', name: 'G1', members: [{ id: 'p1', name: 'A', is_instructor: false, group_id: 'g1' }] },
-      { id: 'g2', season_id: 's1', name: 'G2', members: [{ id: 'p2', name: 'B', is_instructor: false, group_id: 'g2' }] },
+      { id: 'g1', season_id: 's1', name: 'G1', members: [{ id: 'p1', first_name: 'A', last_name: 'X', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g1' }] },
+      { id: 'g2', season_id: 's1', name: 'G2', members: [{ id: 'p2', first_name: 'B', last_name: 'Y', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g2' }] },
     ];
     fixture.componentInstance.preferences = [
       { id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' },
@@ -59,9 +59,9 @@ describe('SeatingGraphComponent', () => {
   it('should color met preferences green and unmet red', () => {
     const fixture = TestBed.createComponent(SeatingGraphComponent);
     fixture.componentInstance.groups = [
-      { id: 'g1', season_id: 's1', name: 'G1', members: [{ id: 'p1', name: 'A', is_instructor: false, group_id: 'g1' }] },
-      { id: 'g2', season_id: 's1', name: 'G2', members: [{ id: 'p2', name: 'B', is_instructor: false, group_id: 'g2' }] },
-      { id: 'g3', season_id: 's1', name: 'G3', members: [{ id: 'p3', name: 'C', is_instructor: false, group_id: 'g3' }] },
+      { id: 'g1', season_id: 's1', name: 'G1', members: [{ id: 'p1', first_name: 'A', last_name: 'X', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g1' }] },
+      { id: 'g2', season_id: 's1', name: 'G2', members: [{ id: 'p2', first_name: 'B', last_name: 'Y', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g2' }] },
+      { id: 'g3', season_id: 's1', name: 'G3', members: [{ id: 'p3', first_name: 'C', last_name: 'Z', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g3' }] },
     ];
     fixture.componentInstance.preferences = [
       { id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' },

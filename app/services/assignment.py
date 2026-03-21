@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.db import Assignment, Bus, ConstraintConfig, Group, Person, PersonPreference, Registration, RidePreference, SkiDay
+from app.models.db import Assignment, Bus, ConstraintConfig, Group, Person, PersonAbsence, PersonPreference, Registration, RidePreference, SkiDay
 from app.solver.converter import buses_to_solver, config_to_weights, groups_to_solver
 from app.solver.engine import solve
 from app.solver.types import SolverResult
@@ -21,11 +21,19 @@ def run_solver(db: Session, season_id: str) -> SolverResult:
             selectinload(PersonPreference.person_b),
         )
     ).all()
+    person_absences = db.scalars(
+        select(PersonAbsence)
+        .join(Person)
+        .join(Group)
+        .where(Group.season_id == season_id)
+    ).all()
     config = db.scalar(
         select(ConstraintConfig).where(ConstraintConfig.season_id == season_id)
     )
 
-    solver_groups = groups_to_solver(list(groups), list(preferences), list(person_preferences))
+    solver_groups = groups_to_solver(
+        list(groups), list(preferences), list(person_preferences), list(person_absences)
+    )
     solver_buses = buses_to_solver(list(buses))
     weights = config_to_weights(config)
 

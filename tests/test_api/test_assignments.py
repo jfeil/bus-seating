@@ -27,7 +27,7 @@ class TestFullWorkflow:
 
         g3 = client.post(f"/api/seasons/{sid}/groups", json={
             "name": "Instructor Team",
-            "members": [{"name": "Klaus", "is_instructor": True}],
+            "members": [{"name": "Klaus", "person_type": "lehrteam"}],
             "register_for_days": [d1["id"], d2["id"]],
         }).json()
 

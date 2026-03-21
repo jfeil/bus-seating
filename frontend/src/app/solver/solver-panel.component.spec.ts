@@ -30,7 +30,7 @@ describe('SolverPanelComponent', () => {
       { id: 'd1', season_id: 's1', name: 'Day 1', date: null },
     ]);
     httpMock.expectOne('/api/seasons/s1/groups').flush([
-      { id: 'g1', season_id: 's1', name: 'G1', members: [{ id: 'p1', name: 'A', is_instructor: false, group_id: 'g1' }] },
+      { id: 'g1', season_id: 's1', name: 'G1', members: [{ id: 'p1', first_name: 'A', last_name: 'X', person_type: 'freifahrer' as const, birth_year: null, group_id: 'g1' }] },
     ]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/days/d1/seating-plan').flush([]);
@@ -70,7 +70,7 @@ describe('SolverPanelComponent', () => {
     // Reload seating plans after solve
     httpMock.expectOne('/api/seasons/s1/days/d1/seating-plan').flush([{
       bus_name: 'Bus A', bus_id: 'b1', capacity: 50, reserved_seats: 0,
-      groups: [{ group_id: 'g1', group_name: 'G1', members: [{ person_id: 'p1', person_name: 'A', is_instructor: false }], is_instructor_group: false }],
+      groups: [{ group_id: 'g1', group_name: 'G1', members: [{ person_id: 'p1', person_first_name: 'A', person_last_name: 'X', person_type: 'freifahrer' as const, birth_year: null }], is_instructor_group: false }],
     }]);
     tick();
 

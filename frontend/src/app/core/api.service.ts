@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Season, SkiDay, Bus, Group, Registration, RidePreference, PersonPreference,
-  ConstraintConfig, Assignment, SolveResult, SeatingPlanEntry,
+  PersonAbsence, ConstraintConfig, Assignment, SolveResult, SeatingPlanEntry,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -55,7 +55,7 @@ export class ApiService {
   getGroups(seasonId: string): Observable<Group[]> {
     return this.http.get<Group[]>(`${this.base}/seasons/${seasonId}/groups`);
   }
-  createGroup(seasonId: string, data: { name: string; members: { name: string; is_instructor?: boolean }[]; register_for_days?: string[] }): Observable<Group> {
+  createGroup(seasonId: string, data: { name: string; members: { first_name: string; last_name?: string; person_type?: string; birth_year?: number | null }[]; register_for_days?: string[] }): Observable<Group> {
     return this.http.post<Group>(`${this.base}/seasons/${seasonId}/groups`, data);
   }
   updateGroup(seasonId: string, groupId: string, data: { name?: string }): Observable<Group> {
@@ -64,7 +64,7 @@ export class ApiService {
   deleteGroup(seasonId: string, groupId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/seasons/${seasonId}/groups/${groupId}`);
   }
-  updatePerson(seasonId: string, groupId: string, personId: string, data: { name?: string; is_instructor?: boolean }): Observable<any> {
+  updatePerson(seasonId: string, groupId: string, personId: string, data: { first_name?: string; last_name?: string; person_type?: string; birth_year?: number | null }): Observable<any> {
     return this.http.put(`${this.base}/seasons/${seasonId}/groups/${groupId}/members/${personId}`, data);
   }
 
@@ -103,6 +103,24 @@ export class ApiService {
   }
   deletePersonPreference(seasonId: string, prefId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/seasons/${seasonId}/person-preferences/${prefId}`);
+  }
+
+  // --- Person Absences ---
+  getPersonAbsences(seasonId: string): Observable<PersonAbsence[]> {
+    return this.http.get<PersonAbsence[]>(`${this.base}/seasons/${seasonId}/person-absences`);
+  }
+  createPersonAbsence(seasonId: string, personId: string, dayId: string): Observable<PersonAbsence> {
+    return this.http.post<PersonAbsence>(`${this.base}/seasons/${seasonId}/person-absences`, {
+      person_id: personId, ski_day_id: dayId,
+    });
+  }
+  deletePersonAbsence(seasonId: string, absenceId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/seasons/${seasonId}/person-absences/${absenceId}`);
+  }
+
+  // --- CSV Import ---
+  importCsv(seasonId: string, csvText: string): Observable<{ days_created: number; groups_created: number; persons_created: number; absences_created: number }> {
+    return this.http.post<any>(`${this.base}/seasons/${seasonId}/import-csv`, { csv_text: csvText });
   }
 
   // --- Config ---

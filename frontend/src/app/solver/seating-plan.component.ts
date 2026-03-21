@@ -5,7 +5,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { SeatingPlanEntry, SeatingPlanGroup } from '../core/models';
+import { SeatingPlanEntry, SeatingPlanGroup, PERSON_TYPE_CONFIG, PersonType } from '../core/models';
 import { ApiService } from '../core/api.service';
 
 @Component({
@@ -40,8 +40,8 @@ import { ApiService } from '../core/api.service';
                   <div class="members">
                     @for (m of group.members; track m.person_id) {
                       <span class="member">
-                        {{ m.person_name }}
-                        @if (m.is_instructor) { <mat-icon class="small-icon">school</mat-icon> }
+                        {{ m.person_last_name }}, {{ m.person_first_name }}
+                        @if (personTypeIcon(m.person_type); as icon) { <mat-icon class="small-icon" [fontIcon]="icon"></mat-icon> }
                       </span>
                     }
                   </div>
@@ -92,6 +92,10 @@ export class SeatingPlanComponent {
   @Output() assignmentChanged = new EventEmitter<void>();
 
   constructor(private api: ApiService) {}
+
+  personTypeIcon(type: PersonType): string | null {
+    return PERSON_TYPE_CONFIG[type].icon;
+  }
 
   otherBuses(currentBusId: string): SeatingPlanEntry[] {
     return this.plan.filter(b => b.bus_id !== currentBusId);

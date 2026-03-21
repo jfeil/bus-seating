@@ -39,7 +39,7 @@ def _order_days_by_constraint_pressure(
     """Process the most constrained day first (highest ratio of people to seats)."""
 
     def pressure(day: str) -> float:
-        total_people = sum(g.size for g in groups if day in g.days)
+        total_people = sum(g.day_size(day) for g in groups if day in g.days)
         total_capacity = sum(b.effective_capacity for b in buses_by_day.get(day, []))
         return total_people / total_capacity if total_capacity > 0 else float("inf")
 
@@ -64,7 +64,7 @@ def _assign_day(
         )
         if best_bus is not None:
             assignments[(group.id, day)] = best_bus
-            bus_remaining[best_bus] -= group.size
+            bus_remaining[best_bus] -= group.day_size(day)
 
     return assignments
 
@@ -88,7 +88,7 @@ def _find_best_bus(
     best_score = float("-inf")
 
     for bus in day_buses:
-        if bus_remaining[bus.name] < group.size:
+        if bus_remaining[bus.name] < group.day_size(day):
             continue
 
         score = _score_bus_for_group(
@@ -161,8 +161,8 @@ def _instructor_distribution_score(
             continue
         assigned_bus = assignments.get((group.id, day))
         if assigned_bus is not None:
-            instructor_count_per_bus[assigned_bus] += group.size
-        total_instructors += group.size
+            instructor_count_per_bus[assigned_bus] += group.day_size(day)
+        total_instructors += group.day_size(day)
 
     num_buses = len(day_buses)
     if num_buses == 0:
@@ -250,7 +250,7 @@ def _current_bus_loads(
     loads: dict[str, int] = defaultdict(int)
     for (gid, d), bname in assignments.items():
         if d == day:
-            loads[bname] += groups_by_id[gid].size
+            loads[bname] += groups_by_id[gid].day_size(day)
     return loads
 
 
@@ -272,9 +272,9 @@ def _try_swap(
     bus_capacities = {b.name: b.effective_capacity for b in day_buses}
     loads = _current_bus_loads(assignments, day, groups_by_id)
 
-    if loads[bus_b] - group_b.size + group_a.size > bus_capacities[bus_b]:
+    if loads[bus_b] - group_b.day_size(day) + group_a.day_size(day) > bus_capacities[bus_b]:
         return False
-    if loads[bus_a] - group_a.size + group_b.size > bus_capacities[bus_a]:
+    if loads[bus_a] - group_a.day_size(day) + group_b.day_size(day) > bus_capacities[bus_a]:
         return False
 
     score_before = (
@@ -319,7 +319,7 @@ def _try_move(
     for bus in day_buses:
         if bus.name == current_bus:
             continue
-        if loads[bus.name] + group.size > bus_capacities[bus.name]:
+        if loads[bus.name] + group.day_size(day) > bus_capacities[bus.name]:
             continue
 
         assignments[(group.id, day)] = bus.name

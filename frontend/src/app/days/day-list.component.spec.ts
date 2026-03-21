@@ -25,6 +25,18 @@ describe('DayListComponent', () => {
 
   afterEach(() => httpMock.verify());
 
+  function flushExtra() {
+    httpMock.expectOne('/api/seasons/s1/groups').flush([]);
+    httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
+  }
+
+  function flushReloadExtra() {
+    httpMock.expectOne('/api/seasons/s1/groups').flush([]);
+    httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
+  }
+
   it('should load days on init', fakeAsync(() => {
     const fixture = TestBed.createComponent(DayListComponent);
     fixture.detectChanges();
@@ -33,6 +45,7 @@ describe('DayListComponent', () => {
       { id: 'd1', season_id: 's1', name: 'Day 1', date: '2026-01-10' },
     ]);
     httpMock.expectOne('/api/seasons/s1/days/d1/buses').flush([]);
+    flushExtra();
     tick();
     fixture.detectChanges();
 
@@ -43,6 +56,7 @@ describe('DayListComponent', () => {
     const fixture = TestBed.createComponent(DayListComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/seasons/s1/days').flush([]);
+    flushExtra();
     tick();
 
     fixture.componentInstance.newDayName = 'Day 2';
@@ -59,6 +73,7 @@ describe('DayListComponent', () => {
       { id: 'd2', season_id: 's1', name: 'Day 2', date: '2026-01-11' },
     ]);
     httpMock.expectOne('/api/seasons/s1/days/d2/buses').flush([]);
+    flushReloadExtra();
     tick();
 
     expect(fixture.componentInstance.days().length).toBe(1);
@@ -72,6 +87,7 @@ describe('DayListComponent', () => {
       { id: 'd1', season_id: 's1', name: 'Day 1', date: null },
     ]);
     httpMock.expectOne('/api/seasons/s1/days/d1/buses').flush([]);
+    flushExtra();
     tick();
 
     fixture.componentInstance.newDayName = '';
@@ -83,6 +99,7 @@ describe('DayListComponent', () => {
     tick();
 
     httpMock.expectOne('/api/seasons/s1/days').flush([]);
+    flushReloadExtra();
     tick();
   }));
 
@@ -93,6 +110,7 @@ describe('DayListComponent', () => {
       { id: 'd1', season_id: 's1', name: 'Day 1', date: null },
     ]);
     httpMock.expectOne('/api/seasons/s1/days/d1/buses').flush([]);
+    flushExtra();
     tick();
 
     fixture.componentInstance.newBusNames['d1'] = 'Bus A';
@@ -122,6 +140,7 @@ describe('DayListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/days/d1/buses').flush([
       { id: 'b1', ski_day_id: 'd1', name: 'Bus A', capacity: 50, reserved_seats: 0 },
     ]);
+    flushExtra();
     tick();
 
     fixture.componentInstance.removeBus('d1', 'b1');
@@ -146,11 +165,41 @@ describe('DayListComponent', () => {
       { id: 'b1', ski_day_id: 'd1', name: 'Bus A', capacity: 50, reserved_seats: 0 },
       { id: 'b2', ski_day_id: 'd1', name: 'Bus B', capacity: 40, reserved_seats: 5 },
     ]);
+    flushExtra();
     tick();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.getBuses('d1').length).toBe(2);
     const cards = fixture.nativeElement.querySelectorAll('.day-card');
     expect(cards.length).toBe(1);
+  }));
+
+  it('should calculate attendees and capacity', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DayListComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/seasons/s1/days').flush([
+      { id: 'd1', season_id: 's1', name: 'Day 1', date: null },
+    ]);
+    httpMock.expectOne('/api/seasons/s1/days/d1/buses').flush([
+      { id: 'b1', ski_day_id: 'd1', name: 'Bus A', capacity: 50, reserved_seats: 5 },
+    ]);
+    httpMock.expectOne('/api/seasons/s1/groups').flush([
+      { id: 'g1', season_id: 's1', name: 'G1', members: [
+        { id: 'p1', first_name: 'Alice', last_name: 'Smith', person_type: 'freifahrer', birth_year: null, group_id: 'g1' },
+        { id: 'p2', first_name: 'Bob', last_name: 'Jones', person_type: 'freifahrer', birth_year: null, group_id: 'g1' },
+      ]},
+    ]);
+    httpMock.expectOne('/api/seasons/s1/registrations').flush([
+      { id: 'r1', group_id: 'g1', ski_day_id: 'd1' },
+    ]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([
+      { id: 'a1', person_id: 'p2', ski_day_id: 'd1', person_name: 'Bob', day_name: 'Day 1' },
+    ]);
+    tick();
+
+    expect(fixture.componentInstance.getAttendees('d1')).toBe(1); // Alice only, Bob absent
+    expect(fixture.componentInstance.getTotalCapacity('d1')).toBe(45); // 50 - 5 reserved
+    expect(fixture.componentInstance.getAvailableSeats('d1')).toBe(44);
   }));
 });

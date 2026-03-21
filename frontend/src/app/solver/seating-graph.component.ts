@@ -1,6 +1,6 @@
 import { Component, Input, OnChanges, ElementRef, ViewChild, AfterViewInit, SimpleChanges } from '@angular/core';
 import * as d3 from 'd3';
-import { Group, Bus, SeatingPlanEntry, RidePreference } from '../core/models';
+import { Group, Bus, SeatingPlanEntry, RidePreference, PERSON_TYPE_CONFIG } from '../core/models';
 
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
@@ -190,7 +190,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
       id: g.id,
       label: g.name,
       size: g.members.length,
-      isInstructor: g.members.some(m => m.is_instructor),
+      isInstructor: g.members.some(m => PERSON_TYPE_CONFIG[m.person_type].isInstructorLike),
     }));
   }
 

@@ -18,10 +18,28 @@ export interface Bus {
   reserved_seats: number;
 }
 
+export type PersonType = 'freifahrer' | 'skikurs' | 'lehrteam';
+
+export interface PersonTypeInfo {
+  label: string;
+  icon: string | null;
+  isInstructorLike: boolean;
+}
+
+export const PERSON_TYPE_CONFIG: Record<PersonType, PersonTypeInfo> = {
+  freifahrer: { label: 'Freifahrer', icon: null, isInstructorLike: false },
+  skikurs: { label: 'Skikurs', icon: 'downhill_skiing', isInstructorLike: false },
+  lehrteam: { label: 'Lehrteam', icon: 'school', isInstructorLike: true },
+};
+
+export const PERSON_TYPE_OPTIONS: PersonType[] = Object.keys(PERSON_TYPE_CONFIG) as PersonType[];
+
 export interface Person {
   id: string;
-  name: string;
-  is_instructor: boolean;
+  first_name: string;
+  last_name: string;
+  person_type: PersonType;
+  birth_year: number | null;
   group_id: string;
 }
 
@@ -56,6 +74,14 @@ export interface PersonPreference {
   group_b_name: string;
 }
 
+export interface PersonAbsence {
+  id: string;
+  person_id: string;
+  ski_day_id: string;
+  person_name: string;
+  day_name: string;
+}
+
 export interface ConstraintConfig {
   instructor_consistency: number;
   passenger_consistency: number;
@@ -77,8 +103,10 @@ export interface SolveResult {
 
 export interface SeatingPlanPerson {
   person_id: string;
-  person_name: string;
-  is_instructor: boolean;
+  person_first_name: string;
+  person_last_name: string;
+  person_type: PersonType;
+  birth_year: number | null;
 }
 
 export interface SeatingPlanGroup {

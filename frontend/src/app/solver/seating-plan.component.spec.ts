@@ -31,8 +31,10 @@ describe('SeatingPlanComponent', () => {
         is_instructor_group: g.isInstructor || false,
         members: Array.from({ length: g.members }, (_, j) => ({
           person_id: `p${i}_${j}`,
-          person_name: `Person ${j}`,
-          is_instructor: g.isInstructor || false,
+          person_first_name: `Person`,
+          person_last_name: `${j}`,
+          person_type: (g.isInstructor ? 'lehrteam' : 'freifahrer') as 'freifahrer' | 'lehrteam',
+          birth_year: null,
         })),
       })),
     };

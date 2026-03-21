@@ -86,7 +86,7 @@ describe('ApiService', () => {
     it('should create a group with members and day registration', () => {
       const data = {
         name: 'Familie Mueller',
-        members: [{ name: 'Hans' }, { name: 'Anna', is_instructor: true }],
+        members: [{ first_name: 'Hans', last_name: 'Mueller' }, { first_name: 'Anna', last_name: 'Mueller', person_type: 'lehrteam' as const, birth_year: null }],
         register_for_days: ['d1', 'd2'],
       };
       service.createGroup('s1', data).subscribe(g => {
@@ -98,8 +98,8 @@ describe('ApiService', () => {
       req.flush({
         id: 'g1', season_id: 's1', name: 'Familie Mueller',
         members: [
-          { id: 'p1', name: 'Hans', is_instructor: false, group_id: 'g1' },
-          { id: 'p2', name: 'Anna', is_instructor: true, group_id: 'g1' },
+          { id: 'p1', first_name: 'Hans', last_name: 'Mueller', person_type: 'freifahrer', birth_year: null, group_id: 'g1' },
+          { id: 'p2', first_name: 'Anna', last_name: 'Mueller', person_type: 'lehrteam', birth_year: null, group_id: 'g1' },
         ],
       });
     });

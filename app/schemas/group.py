@@ -1,23 +1,32 @@
 from pydantic import BaseModel
 
 
+PERSON_TYPES = ("freifahrer", "skikurs", "lehrteam")
+
+
 class PersonCreate(BaseModel):
-    name: str
-    is_instructor: bool = False
+    first_name: str
+    last_name: str = ""
+    person_type: str = "freifahrer"
+    birth_year: int | None = None
 
 
 class PersonRead(BaseModel):
     id: str
-    name: str
-    is_instructor: bool
+    first_name: str
+    last_name: str
+    person_type: str
+    birth_year: int | None = None
     group_id: str
 
     model_config = {"from_attributes": True}
 
 
 class PersonUpdate(BaseModel):
-    name: str | None = None
-    is_instructor: bool | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    person_type: str | None = None
+    birth_year: int | None = None
 
 
 class GroupCreate(BaseModel):
@@ -43,6 +52,21 @@ class RegistrationRead(BaseModel):
     id: str
     group_id: str
     ski_day_id: str
+
+    model_config = {"from_attributes": True}
+
+
+class PersonAbsenceCreate(BaseModel):
+    person_id: str
+    ski_day_id: str
+
+
+class PersonAbsenceRead(BaseModel):
+    id: str
+    person_id: str
+    ski_day_id: str
+    person_name: str
+    day_name: str
 
     model_config = {"from_attributes": True}
 

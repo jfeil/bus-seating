@@ -8,6 +8,9 @@ class Base(DeclarativeBase):
     pass
 
 
+INSTRUCTOR_TYPES: frozenset[str] = frozenset({"lehrteam"})
+
+
 def new_uuid() -> str:
     return str(uuid.uuid4())
 
@@ -65,11 +68,21 @@ class Person(Base):
     __tablename__ = "persons"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=new_uuid)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    is_instructor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    first_name: Mapped[str] = mapped_column(String, nullable=False)
+    last_name: Mapped[str] = mapped_column(String, nullable=False, default="")
+    person_type: Mapped[str] = mapped_column(String, nullable=False, default="freifahrer")
+    birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     group_id: Mapped[str] = mapped_column(ForeignKey("groups.id"), nullable=False)
 
     group: Mapped["Group"] = relationship(back_populates="members")
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def is_instructor(self) -> bool:
+        return self.person_type in INSTRUCTOR_TYPES
 
 
 class Group(Base):
@@ -127,6 +140,18 @@ class PersonPreference(Base):
     season: Mapped["Season"] = relationship(back_populates="person_preferences")
     person_a: Mapped["Person"] = relationship(foreign_keys=[person_a_id])
     person_b: Mapped["Person"] = relationship(foreign_keys=[person_b_id])
+
+
+class PersonAbsence(Base):
+    __tablename__ = "person_absences"
+    __table_args__ = (UniqueConstraint("person_id", "ski_day_id"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=new_uuid)
+    person_id: Mapped[str] = mapped_column(ForeignKey("persons.id"), nullable=False)
+    ski_day_id: Mapped[str] = mapped_column(ForeignKey("ski_days.id"), nullable=False)
+
+    person: Mapped["Person"] = relationship()
+    ski_day: Mapped["SkiDay"] = relationship()
 
 
 class Assignment(Base):

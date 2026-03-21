@@ -1,17 +1,24 @@
+import csv
+import io
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.models.db import Group, Person, PersonPreference, Registration, RidePreference
+from app.models.db import Group, Person, PersonAbsence, PersonPreference, Registration, RidePreference, SkiDay
 from app.schemas.group import (
     GroupCreate,
     GroupRead,
     GroupUpdate,
+    PersonAbsenceCreate,
+    PersonAbsenceRead,
     PersonUpdate,
     PersonRead,
     PersonPreferenceCreate,
     PersonPreferenceRead,
+    PERSON_TYPES,
     RegistrationRead,
     RidePreferenceCreate,
     RidePreferenceRead,
@@ -26,7 +33,12 @@ router = APIRouter(prefix="/api/seasons/{season_id}", tags=["groups"])
 def create_group(season_id: str, body: GroupCreate, db: Session = Depends(get_db)):
     group = Group(season_id=season_id, name=body.name)
     for member in body.members:
-        group.members.append(Person(name=member.name, is_instructor=member.is_instructor))
+        group.members.append(Person(
+            first_name=member.first_name,
+            last_name=member.last_name,
+            person_type=member.person_type,
+            birth_year=member.birth_year,
+        ))
     db.add(group)
     db.flush()
 
@@ -89,10 +101,14 @@ def update_person(
     group = db.get(Group, group_id)
     if not group or group.season_id != season_id:
         raise HTTPException(404, "Group not found")
-    if body.name is not None:
-        person.name = body.name
-    if body.is_instructor is not None:
-        person.is_instructor = body.is_instructor
+    if body.first_name is not None:
+        person.first_name = body.first_name
+    if body.last_name is not None:
+        person.last_name = body.last_name
+    if body.person_type is not None:
+        person.person_type = body.person_type
+    if body.birth_year is not None:
+        person.birth_year = body.birth_year
     db.commit()
     db.refresh(person)
     return person
@@ -203,8 +219,8 @@ def create_person_preference(
         season_id=pref.season_id,
         person_a_id=pref.person_a_id,
         person_b_id=pref.person_b_id,
-        person_a_name=person_a.name,
-        person_b_name=person_b.name,
+        person_a_name=person_a.full_name,
+        person_b_name=person_b.full_name,
         group_a_name=person_a.group.name,
         group_b_name=person_b.group.name,
     )
@@ -226,8 +242,8 @@ def list_person_preferences(season_id: str, db: Session = Depends(get_db)):
             season_id=p.season_id,
             person_a_id=p.person_a_id,
             person_b_id=p.person_b_id,
-            person_a_name=p.person_a.name,
-            person_b_name=p.person_b.name,
+            person_a_name=p.person_a.full_name,
+            person_b_name=p.person_b.full_name,
             group_a_name=p.person_a.group.name,
             group_b_name=p.person_b.group.name,
         )
@@ -242,3 +258,232 @@ def delete_person_preference(season_id: str, preference_id: str, db: Session = D
         raise HTTPException(404, "Preference not found")
     db.delete(pref)
     db.commit()
+
+
+# --- Person Absences ---
+
+@router.post("/person-absences", response_model=PersonAbsenceRead, status_code=201)
+def create_person_absence(
+    season_id: str, body: PersonAbsenceCreate, db: Session = Depends(get_db)
+):
+    person = db.get(Person, body.person_id)
+    if not person:
+        raise HTTPException(404, "Person not found")
+    group = db.get(Group, person.group_id)
+    if not group or group.season_id != season_id:
+        raise HTTPException(404, "Person not found in this season")
+    day = db.get(SkiDay, body.ski_day_id)
+    if not day or day.season_id != season_id:
+        raise HTTPException(404, "Day not found in this season")
+
+    existing = db.scalar(
+        select(PersonAbsence)
+        .where(PersonAbsence.person_id == body.person_id, PersonAbsence.ski_day_id == body.ski_day_id)
+    )
+    if existing:
+        raise HTTPException(409, "Absence already exists")
+
+    absence = PersonAbsence(person_id=body.person_id, ski_day_id=body.ski_day_id)
+    db.add(absence)
+    db.commit()
+    db.refresh(absence)
+    return PersonAbsenceRead(
+        id=absence.id,
+        person_id=absence.person_id,
+        ski_day_id=absence.ski_day_id,
+        person_name=person.full_name,
+        day_name=day.name,
+    )
+
+
+@router.get("/person-absences", response_model=list[PersonAbsenceRead])
+def list_person_absences(season_id: str, db: Session = Depends(get_db)):
+    absences = db.scalars(
+        select(PersonAbsence)
+        .join(Person)
+        .join(Group)
+        .where(Group.season_id == season_id)
+        .options(
+            selectinload(PersonAbsence.person),
+            selectinload(PersonAbsence.ski_day),
+        )
+    ).all()
+    return [
+        PersonAbsenceRead(
+            id=a.id,
+            person_id=a.person_id,
+            ski_day_id=a.ski_day_id,
+            person_name=a.person.full_name,
+            day_name=a.ski_day.name,
+        )
+        for a in absences
+    ]
+
+
+@router.delete("/person-absences/{absence_id}", status_code=204)
+def delete_person_absence(season_id: str, absence_id: str, db: Session = Depends(get_db)):
+    absence = db.get(PersonAbsence, absence_id)
+    if not absence:
+        raise HTTPException(404, "Absence not found")
+    db.delete(absence)
+    db.commit()
+
+
+# --- CSV Import ---
+
+_ATTENDING_MARKERS = frozenset({"x", "s", "k"})
+
+
+class CsvImportRequest(BaseModel):
+    csv_text: str
+
+
+class CsvImportResult(BaseModel):
+    days_created: int
+    groups_created: int
+    persons_created: int
+    absences_created: int
+
+
+@router.post("/import-csv", response_model=CsvImportResult)
+def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get_db)):
+    season = db.scalar(select(SkiDay.season_id).where(SkiDay.season_id == season_id).limit(1))
+    # Just verify season exists via any table; simpler: try to proceed
+    reader = csv.reader(io.StringIO(body.csv_text.strip()))
+    header = next(reader, None)
+    if not header:
+        raise HTTPException(400, "Empty CSV")
+
+    # Normalize header
+    header = [h.strip() for h in header]
+
+    # Find column indices
+    header_lower = [h.lower() for h in header]
+
+    # Name columns: either "first_name"+"last_name" or single "name"
+    first_name_col = next((i for i, h in enumerate(header_lower) if h == "first_name"), None)
+    last_name_col = next((i for i, h in enumerate(header_lower) if h == "last_name"), None)
+    name_col = next((i for i, h in enumerate(header_lower) if h == "name"), None)
+
+    if first_name_col is None and name_col is None:
+        raise HTTPException(400, "Missing 'Name' or 'first_name'/'last_name' columns")
+
+    try:
+        type_col = next(i for i, h in enumerate(header_lower) if h == "type")
+    except StopIteration:
+        raise HTTPException(400, "Missing 'Type' column")
+    try:
+        group_col = next(i for i, h in enumerate(header_lower) if h == "busgruppe")
+    except StopIteration:
+        raise HTTPException(400, "Missing 'Busgruppe' column")
+
+    # Tag columns are everything not a known column
+    known_cols = {type_col, group_col}
+    if first_name_col is not None:
+        known_cols.add(first_name_col)
+    if last_name_col is not None:
+        known_cols.add(last_name_col)
+    if name_col is not None:
+        known_cols.add(name_col)
+    tag_cols = [i for i in range(len(header)) if i not in known_cols]
+    day_names = [header[i] for i in tag_cols]
+
+    # Create days
+    days: list[SkiDay] = []
+    for day_name in day_names:
+        day = SkiDay(season_id=season_id, name=day_name)
+        db.add(day)
+        days.append(day)
+    db.flush()
+
+    # Parse rows
+    type_map = {t: t for t in PERSON_TYPES}
+    type_map.update({t.capitalize(): t for t in PERSON_TYPES})
+
+    rows: list[dict] = []
+    for row in reader:
+        if len(row) < len(header):
+            row.extend([""] * (len(header) - len(row)))
+
+        # Parse name
+        if first_name_col is not None:
+            first_name = row[first_name_col].strip()
+            last_name = row[last_name_col].strip() if last_name_col is not None else ""
+        else:
+            full = row[name_col].strip()
+            if not full:
+                continue
+            parts = full.rsplit(" ", 1)
+            first_name = parts[0]
+            last_name = parts[1] if len(parts) > 1 else ""
+
+        if not first_name and not last_name:
+            continue
+
+        raw_type = row[type_col].strip()
+        person_type = type_map.get(raw_type, "freifahrer")
+        group_key = row[group_col].strip()
+        day_attendance = {
+            days[idx].id: row[tag_cols[idx]].strip().lower() in _ATTENDING_MARKERS
+            for idx in range(len(tag_cols))
+        }
+        rows.append({
+            "first_name": first_name,
+            "last_name": last_name,
+            "person_type": person_type,
+            "group_key": group_key,
+            "day_attendance": day_attendance,
+        })
+
+    # Group rows by group_key; empty key = solo group
+    groups_by_key: dict[str, list[dict]] = {}
+    solo_counter = 0
+    for row in rows:
+        key = row["group_key"]
+        if not key:
+            solo_counter += 1
+            key = f"__solo_{solo_counter}"
+            row["group_key"] = key
+        groups_by_key.setdefault(key, []).append(row)
+
+    # Create groups, registrations, and absences
+    groups_created = 0
+    persons_created = 0
+    absences_created = 0
+
+    for group_key, members in groups_by_key.items():
+        group_name = f"Busgruppe {group_key}" if not group_key.startswith("__solo_") else f"{members[0]['first_name']} {members[0]['last_name']}".strip()
+        group = Group(season_id=season_id, name=group_name)
+
+        persons: list[tuple[Person, dict[str, bool]]] = []
+        for m in members:
+            person = Person(first_name=m["first_name"], last_name=m["last_name"], person_type=m["person_type"])
+            group.members.append(person)
+            persons.append((person, m["day_attendance"]))
+
+        db.add(group)
+        db.flush()
+        persons_created += len(persons)
+
+        # Register group for days where at least one member attends
+        for day in days:
+            anyone_attends = any(att[day.id] for _, att in persons)
+            if anyone_attends:
+                db.add(Registration(group_id=group.id, ski_day_id=day.id))
+
+                # Create absences for members who don't attend this day
+                for person, attendance in persons:
+                    if not attendance[day.id]:
+                        db.add(PersonAbsence(person_id=person.id, ski_day_id=day.id))
+                        absences_created += 1
+
+        groups_created += 1
+
+    db.commit()
+
+    return CsvImportResult(
+        days_created=len(days),
+        groups_created=groups_created,
+        persons_created=persons_created,
+        absences_created=absences_created,
+    )

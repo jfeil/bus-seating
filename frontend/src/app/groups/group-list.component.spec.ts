@@ -33,6 +33,7 @@ describe('GroupListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
   }
 
   function flushReload() {
@@ -41,6 +42,7 @@ describe('GroupListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
   }
 
   it('should load groups, days, registrations, and preferences on init', fakeAsync(() => {
@@ -48,12 +50,13 @@ describe('GroupListComponent', () => {
     fixture.detectChanges();
 
     httpMock.expectOne('/api/seasons/s1/groups').flush([
-      { id: 'g1', season_id: 's1', name: 'Family A', members: [{ id: 'p1', name: 'Alice', is_instructor: false, group_id: 'g1' }] },
+      { id: 'g1', season_id: 's1', name: 'Family A', members: [{ id: 'p1', first_name: 'Alice', last_name: 'Smith', person_type: 'freifahrer', birth_year: null, group_id: 'g1' }] },
     ]);
     httpMock.expectOne('/api/seasons/s1/days').flush([]);
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
     tick();
 
     expect(fixture.componentInstance.groups().length).toBe(1);
@@ -67,8 +70,8 @@ describe('GroupListComponent', () => {
 
     fixture.componentInstance.newGroupName = 'Test Group';
     fixture.componentInstance.newMembers = [
-      { name: 'Bob', is_instructor: false },
-      { name: 'Carol', is_instructor: true },
+      { first_name: 'Bob', last_name: 'Jones', person_type: 'freifahrer' as const, birth_year: null },
+      { first_name: 'Carol', last_name: 'Lee', person_type: 'lehrteam' as const, birth_year: null },
     ];
     fixture.componentInstance.selectedDays.add('d1');
     fixture.componentInstance.createGroup();
@@ -93,7 +96,7 @@ describe('GroupListComponent', () => {
     tick();
 
     fixture.componentInstance.newGroupName = '';
-    fixture.componentInstance.newMembers = [{ name: 'Alice', is_instructor: false }];
+    fixture.componentInstance.newMembers = [{ first_name: 'Alice', last_name: 'Smith', person_type: 'freifahrer' as const, birth_year: null }];
     fixture.componentInstance.createGroup();
 
     httpMock.expectNone(r => r.method === 'POST');
@@ -112,33 +115,18 @@ describe('GroupListComponent', () => {
     httpMock.expectNone(r => r.method === 'POST');
   }));
 
-  it('should parse and import CSV', fakeAsync(() => {
+  it('should import CSV via backend endpoint', fakeAsync(() => {
     const fixture = TestBed.createComponent(GroupListComponent);
     fixture.detectChanges();
     flushInitialLoad();
     tick();
 
-    fixture.componentInstance.csvText = [
-      'Family A,Hans,false',
-      'Family A,Anna,false',
-      'Ski School,Peter,true',
-    ].join('\n');
-    fixture.componentInstance.csvDays.add('d1');
+    fixture.componentInstance.csvText = 'Name,Type,Tag1,Busgruppe\nHans,Freifahrer,x,1\nAnna,Skikurs,x,1';
     fixture.componentInstance.importCsv();
 
-    const reqs = httpMock.match(r => r.method === 'POST' && r.url === '/api/seasons/s1/groups');
-    expect(reqs.length).toBe(2);
-
-    const familyReq = reqs.find(r => r.request.body.name === 'Family A');
-    expect(familyReq!.request.body.members.length).toBe(2);
-    expect(familyReq!.request.body.register_for_days).toEqual(['d1']);
-
-    const schoolReq = reqs.find(r => r.request.body.name === 'Ski School');
-    expect(schoolReq!.request.body.members[0].is_instructor).toBe(true);
-
-    familyReq!.flush({ id: 'g1', season_id: 's1', name: 'Family A', members: [] });
-    tick();
-    schoolReq!.flush({ id: 'g2', season_id: 's1', name: 'Ski School', members: [] });
+    const req = httpMock.expectOne(r => r.method === 'POST' && r.url === '/api/seasons/s1/import-csv');
+    expect(req.request.body.csv_text).toContain('Hans');
+    req.flush({ days_created: 1, groups_created: 1, persons_created: 2, absences_created: 0 });
     tick();
 
     flushReload();
@@ -159,6 +147,7 @@ describe('GroupListComponent', () => {
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
     tick();
 
     fixture.componentInstance.prefGroupA = 'g1';
@@ -177,6 +166,7 @@ describe('GroupListComponent', () => {
       { id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' },
     ]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
     tick();
 
     expect(fixture.componentInstance.preferences().length).toBe(1);
@@ -211,6 +201,7 @@ describe('GroupListComponent', () => {
     ]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
+    httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);
     tick();
 
     const dayNames = fixture.componentInstance.getGroupDayNames('g1');

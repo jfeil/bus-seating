@@ -8,6 +8,11 @@ class SolverGroup:
     is_instructor_group: bool
     days: list[str]
     preferred_groups: list[str] = field(default_factory=list)
+    size_by_day: dict[str, int] = field(default_factory=dict)
+
+    def day_size(self, day: str) -> int:
+        """Return the effective group size for a specific day (accounting for absences)."""
+        return self.size_by_day.get(day, self.size)
 
 
 @dataclass(frozen=True)
