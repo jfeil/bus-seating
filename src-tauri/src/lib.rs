@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri_plugin_shell::ShellExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -6,9 +6,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // Spawn the Python backend as a sidecar process
-            let shell = app.shell();
-            let sidecar = shell.sidecar("backend").unwrap();
-            let (mut _rx, _child) = sidecar.spawn().expect("Failed to spawn backend sidecar");
+            let sidecar = app.shell().sidecar("backend").unwrap();
+            let (_rx, _child) = sidecar.spawn().expect("Failed to spawn backend sidecar");
             Ok(())
         })
         .run(tauri::generate_context!())
