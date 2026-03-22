@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.models.db import Assignment, Bus, Group, Person, PersonAbsence, Registration, Season, SkiDay
+from app.models.db import Assignment, Bus, ConstraintConfig, Group, Person, PersonAbsence, PersonPreference, Registration, RidePreference, Season, SkiDay
 from app.schemas.assignment import (
     AssignmentOverride,
     AssignmentRead,
@@ -16,8 +16,8 @@ from app.schemas.assignment import (
     SeatingPlanGroup,
     SeatingPlanPerson,
     SolveResultRead,
+    UnmetPreferenceDetail,
 )
-from app.models.db import ConstraintConfig
 from app.services.assignment import persist_assignments, run_solver
 from app.services.pdf_export import generate_seating_pdf
 
@@ -75,11 +75,77 @@ def solve_assignments(season_id: str, db: Session = Depends(get_db)):
     for (group_id, day_id), bus_name in result.assignments.items():
         assignments_nested[group_id][day_id] = bus_name
 
+    unmet_details = _resolve_unmet_preferences(db, season_id, result.unmet_preferences)
+
     return SolveResultRead(
         assignments=dict(assignments_nested),
         score=result.score,
-        unmet_preferences=[list(pair) for pair in result.unmet_preferences],
+        unmet_preferences=unmet_details,
     )
+
+
+def _resolve_unmet_preferences(
+    db: Session, season_id: str, unmet_pairs: list[tuple[str, str]]
+) -> list[UnmetPreferenceDetail]:
+    if not unmet_pairs:
+        return []
+
+    pair_set = {(min(a, b), max(a, b)) for a, b in unmet_pairs}
+
+    # Load ride preferences
+    ride_prefs = db.scalars(
+        select(RidePreference)
+        .where(RidePreference.season_id == season_id)
+        .options(
+            selectinload(RidePreference.group_a),
+            selectinload(RidePreference.group_b),
+        )
+    ).all()
+
+    # Load person preferences (they map to group pairs)
+    person_prefs = db.scalars(
+        select(PersonPreference)
+        .where(PersonPreference.season_id == season_id)
+        .options(
+            selectinload(PersonPreference.person_a).selectinload(Person.group),
+            selectinload(PersonPreference.person_b).selectinload(Person.group),
+        )
+    ).all()
+
+    details: list[UnmetPreferenceDetail] = []
+    matched_pairs: set[tuple[str, str]] = set()
+
+    for rp in ride_prefs:
+        pair = (min(rp.group_a_id, rp.group_b_id), max(rp.group_a_id, rp.group_b_id))
+        if pair in pair_set:
+            details.append(UnmetPreferenceDetail(
+                type="ride",
+                preference_id=rp.id,
+                group_a_name=rp.group_a.name,
+                group_b_name=rp.group_b.name,
+                weight=rp.weight,
+                details="",
+            ))
+            matched_pairs.add(pair)
+
+    for pp in person_prefs:
+        ga_id = pp.person_a.group_id
+        gb_id = pp.person_b.group_id
+        if ga_id == gb_id:
+            continue
+        pair = (min(ga_id, gb_id), max(ga_id, gb_id))
+        if pair in pair_set and pair not in matched_pairs:
+            details.append(UnmetPreferenceDetail(
+                type="person",
+                preference_id=pp.id,
+                group_a_name=pp.person_a.group.name,
+                group_b_name=pp.person_b.group.name,
+                weight=pp.weight,
+                details=f"{pp.person_a.full_name} \u2194 {pp.person_b.full_name}",
+            ))
+            matched_pairs.add(pair)
+
+    return details
 
 
 # --- Assignments CRUD ---

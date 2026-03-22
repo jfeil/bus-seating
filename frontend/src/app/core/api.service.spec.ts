@@ -178,7 +178,7 @@ describe('ApiService', () => {
       const req = httpMock.expectOne('/api/seasons/s1/ride-preferences');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ group_a_id: 'g1', group_b_id: 'g2' });
-      req.flush({ id: 'p1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' });
+      req.flush({ id: 'p1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2', weight: 1 });
     });
   });
 });

@@ -31,13 +31,13 @@ def run_solver(db: Session, season_id: str) -> SolverResult:
         select(ConstraintConfig).where(ConstraintConfig.season_id == season_id)
     )
 
-    solver_groups = groups_to_solver(
+    solver_groups, pref_weights = groups_to_solver(
         list(groups), list(preferences), list(person_preferences), list(person_absences)
     )
     solver_buses = buses_to_solver(list(buses))
     weights = config_to_weights(config)
 
-    return solve(solver_groups, solver_buses, weights)
+    return solve(solver_groups, solver_buses, weights, pref_weights)
 
 
 def persist_assignments(db: Session, season_id: str, result: SolverResult) -> None:

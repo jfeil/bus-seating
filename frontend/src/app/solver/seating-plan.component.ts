@@ -28,7 +28,7 @@ import { ApiService } from '../core/api.service';
             ></mat-progress-bar>
 
             <div class="group-list">
-              @for (group of bus.groups; track group.group_id) {
+              @for (group of sortedGroups(bus.groups); track group.group_id) {
                 <div class="group-item" [class.instructor-group]="group.is_instructor_group">
                   <div class="group-header">
                     @if (group.is_instructor_group) {
@@ -72,15 +72,14 @@ import { ApiService } from '../core/api.service';
     .bus-card { height: fit-content; }
     mat-progress-bar { margin: 0.5rem 0; }
     .group-list { margin-top: 0.5rem; }
-    .group-item { padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px; background: #f5f5f5; }
-    .group-item.instructor-group { background: #e3f2fd; border-left: 3px solid #1976d2; }
+    .group-item { margin: 0.25rem 0; }
     .group-header { display: flex; align-items: center; gap: 0.25rem; }
-    .instructor-icon { font-size: 18px; color: #1976d2; }
-    .member-count { color: #666; font-weight: normal; }
+    .instructor-icon { font-size: 18px; }
+    .member-count { font-weight: normal; }
     .members { margin-top: 0.25rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .member { font-size: 0.9em; color: #555; display: flex; align-items: center; gap: 2px; }
-    .small-icon { font-size: 14px; width: 14px; height: 14px; color: #1976d2; }
-    .empty { color: #999; font-style: italic; }
+    .member { font-size: 0.9em; display: flex; align-items: center; gap: 2px; }
+    .small-icon { font-size: 14px; width: 14px; height: 14px; }
+    .empty { font-style: italic; }
     .move-action { margin-top: 0.25rem; }
     .move-select { font-size: 0.85em; width: 140px; }
   `],
@@ -95,6 +94,15 @@ export class SeatingPlanComponent {
 
   personTypeIcon(type: PersonType): string | null {
     return PERSON_TYPE_CONFIG[type].icon;
+  }
+
+  sortedGroups(groups: SeatingPlanGroup[]): SeatingPlanGroup[] {
+    return [...groups].sort((a, b) => {
+      if (a.is_instructor_group !== b.is_instructor_group) {
+        return a.is_instructor_group ? -1 : 1;
+      }
+      return a.group_name.localeCompare(b.group_name, 'de');
+    });
   }
 
   otherBuses(currentBusId: string): SeatingPlanEntry[] {

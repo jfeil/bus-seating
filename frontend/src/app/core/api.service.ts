@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   Season, SkiDay, Bus, Group, Registration, RidePreference, PersonPreference,
   PersonAbsence, ConstraintConfig, Assignment, SolveResult, SeatingPlanEntry,
+  UnmetPreference,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -64,6 +65,9 @@ export class ApiService {
   deleteGroup(seasonId: string, groupId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/seasons/${seasonId}/groups/${groupId}`);
   }
+  deleteAllGroups(seasonId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/seasons/${seasonId}/groups`);
+  }
   updatePerson(seasonId: string, groupId: string, personId: string, data: { first_name?: string; last_name?: string; person_type?: string; birth_year?: number | null }): Observable<any> {
     return this.http.put(`${this.base}/seasons/${seasonId}/groups/${groupId}/members/${personId}`, data);
   }
@@ -88,6 +92,9 @@ export class ApiService {
       group_a_id: groupAId, group_b_id: groupBId,
     });
   }
+  updateRidePreferenceWeight(seasonId: string, prefId: string, weight: number): Observable<RidePreference> {
+    return this.http.patch<RidePreference>(`${this.base}/seasons/${seasonId}/ride-preferences/${prefId}`, { weight });
+  }
   deleteRidePreference(seasonId: string, prefId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/seasons/${seasonId}/ride-preferences/${prefId}`);
   }
@@ -100,6 +107,9 @@ export class ApiService {
     return this.http.post<PersonPreference>(`${this.base}/seasons/${seasonId}/person-preferences`, {
       person_a_id: personAId, person_b_id: personBId,
     });
+  }
+  updatePersonPreferenceWeight(seasonId: string, prefId: string, weight: number): Observable<PersonPreference> {
+    return this.http.patch<PersonPreference>(`${this.base}/seasons/${seasonId}/person-preferences/${prefId}`, { weight });
   }
   deletePersonPreference(seasonId: string, prefId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/seasons/${seasonId}/person-preferences/${prefId}`);
@@ -121,6 +131,9 @@ export class ApiService {
   // --- CSV Import ---
   importCsv(seasonId: string, csvText: string): Observable<{ days_created: number; groups_created: number; persons_created: number; absences_created: number }> {
     return this.http.post<any>(`${this.base}/seasons/${seasonId}/import-csv`, { csv_text: csvText });
+  }
+  exportCsv(seasonId: string): Observable<string> {
+    return this.http.get(`${this.base}/seasons/${seasonId}/export-csv`, { responseType: 'text' });
   }
 
   // --- Config ---

@@ -29,10 +29,19 @@ class AssignmentOverride(BaseModel):
     bus_id: str
 
 
+class UnmetPreferenceDetail(BaseModel):
+    type: str  # "ride" or "person"
+    preference_id: str
+    group_a_name: str
+    group_b_name: str
+    weight: float
+    details: str  # e.g. person names for person preferences
+
+
 class SolveResultRead(BaseModel):
     assignments: dict[str, dict[str, str]]  # {group_id: {day_id: bus_name}}
     score: float
-    unmet_preferences: list[list[str]]
+    unmet_preferences: list[UnmetPreferenceDetail]
 
 
 class SeatingPlanEntry(BaseModel):

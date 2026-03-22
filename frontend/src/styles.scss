@@ -33,7 +33,36 @@ html {
 html, body { height: 100%; margin: 0; }
 body { font-family: Roboto, "Helvetica Neue", sans-serif; }
 
-// --- App-specific styles (not covered by Material theming) ---
+// --- Theme-aware CSS custom properties ---
+:root {
+  --surface-dim: #f5f5f5;
+  --surface-container: #fafafa;
+  --border-color: #e0e0e0;
+  --text-primary: #333;
+  --text-secondary: rgba(0, 0, 0, 0.54);
+  --text-on-color: #fff;
+  --accent: #1976d2;
+  --instructor-bg: #e3f2fd;
+  --instructor-border: #1976d2;
+  --graph-node-stroke: #fff;
+  --graph-unassigned: #bdbdbd;
+}
+
+.dark-theme {
+  --surface-dim: #3a3a3a;
+  --surface-container: #2a2a2a;
+  --border-color: #555;
+  --text-primary: #e0e0e0;
+  --text-secondary: rgba(255, 255, 255, 0.5);
+  --text-on-color: #fff;
+  --accent: #64b5f6;
+  --instructor-bg: #1a3a5c;
+  --instructor-border: #64b5f6;
+  --graph-node-stroke: #444;
+  --graph-unassigned: #666;
+}
+
+// --- App-specific styles ---
 
 // Active sidenav link highlight
 .dark-theme .active-link {
@@ -42,43 +71,24 @@ body { font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 // Seating plan group items
 .group-item {
-  background: #f5f5f5;
+  background: var(--surface-dim);
   border-radius: 4px;
   padding: 0.5rem;
 }
 .group-item.instructor-group {
-  background: #e3f2fd;
-  border-left: 3px solid #1976d2;
-}
-
-.dark-theme {
-  .group-item {
-    background: #3a3a3a;
-  }
-  .group-item.instructor-group {
-    background: #1a3a5c;
-    border-left-color: #64b5f6;
-  }
+  background: var(--instructor-bg);
+  border-left: 3px solid var(--instructor-border);
 }
 
 // Instructor icon accents
 .instructor-badge, .instructor-icon, .small-icon {
-  color: #1976d2;
-}
-.dark-theme {
-  .instructor-badge, .instructor-icon, .small-icon {
-    color: #64b5f6;
-  }
+  color: var(--accent);
 }
 
 // Muted text
-.subtitle, .member-count, .empty-state, .empty, .reg-info {
-  color: rgba(0, 0, 0, 0.54);
-}
-.dark-theme {
-  .subtitle, .member-count, .empty-state, .empty, .reg-info {
-    color: rgba(255, 255, 255, 0.5);
-  }
+.subtitle, .member-count, .empty-state, .empty, .reg-info,
+.pref-details, .unmet-hint, .member {
+  color: var(--text-secondary);
 }
 
 // Scrollbar styling for dark mode

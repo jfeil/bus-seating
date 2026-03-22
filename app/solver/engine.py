@@ -7,7 +7,9 @@ def solve(
     groups: list[SolverGroup],
     buses: list[SolverBus],
     weights: ConstraintWeights,
+    preference_weights: dict[tuple[str, str], float] | None = None,
 ) -> SolverResult:
+    pref_weights = preference_weights or {}
     buses_by_day = _group_buses_by_day(buses)
     days_in_order = _order_days_by_constraint_pressure(buses_by_day, groups)
 
@@ -15,13 +17,13 @@ def solve(
     for day in days_in_order:
         day_buses = buses_by_day[day]
         day_groups = [g for g in groups if day in g.days]
-        day_assignments = _assign_day(day, day_groups, day_buses, assignments, weights)
+        day_assignments = _assign_day(day, day_groups, day_buses, assignments, weights, pref_weights)
         assignments.update(day_assignments)
 
-    assignments = _improve_assignments(assignments, groups, buses_by_day, weights)
+    assignments = _improve_assignments(assignments, groups, buses_by_day, weights, pref_weights)
 
     unmet = _find_unmet_preferences(assignments, groups)
-    score = _compute_score(assignments, groups, buses_by_day, weights)
+    score = _compute_score(assignments, groups, buses_by_day, weights, pref_weights)
 
     return SolverResult(assignments=assignments, score=score, unmet_preferences=unmet)
 
@@ -52,6 +54,7 @@ def _assign_day(
     day_buses: list[SolverBus],
     existing_assignments: dict[tuple[str, str], str],
     weights: ConstraintWeights,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> dict[tuple[str, str], str]:
     sorted_groups = _sort_groups_for_placement(day_groups)
     bus_remaining = {bus.name: bus.effective_capacity for bus in day_buses}
@@ -60,7 +63,7 @@ def _assign_day(
     for group in sorted_groups:
         best_bus = _find_best_bus(
             group, day, day_buses, bus_remaining, existing_assignments, assignments, weights,
-            all_day_groups=day_groups,
+            all_day_groups=day_groups, pref_weights=pref_weights,
         )
         if best_bus is not None:
             assignments[(group.id, day)] = best_bus
@@ -83,6 +86,7 @@ def _find_best_bus(
     day_assignments: dict[tuple[str, str], str],
     weights: ConstraintWeights,
     all_day_groups: list[SolverGroup] | None = None,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> str | None:
     best_name = None
     best_score = float("-inf")
@@ -93,7 +97,7 @@ def _find_best_bus(
 
         score = _score_bus_for_group(
             group, day, bus, bus_remaining, existing_assignments, day_assignments, weights,
-            all_day_groups=all_day_groups, day_buses=day_buses,
+            all_day_groups=all_day_groups, day_buses=day_buses, pref_weights=pref_weights,
         )
         if score > best_score:
             best_score = score
@@ -112,6 +116,7 @@ def _score_bus_for_group(
     weights: ConstraintWeights,
     all_day_groups: list[SolverGroup] | None = None,
     day_buses: list[SolverBus] | None = None,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> float:
     score = 0.0
 
@@ -134,7 +139,9 @@ def _score_bus_for_group(
     for preferred_id in group.preferred_groups:
         assigned_bus = all_assignments.get((preferred_id, day))
         if assigned_bus == bus.name:
-            score += weights.ride_together
+            pair = (min(group.id, preferred_id), max(group.id, preferred_id))
+            pw = (pref_weights or {}).get(pair, 1.0)
+            score += weights.ride_together * pw
 
     # Instructor distribution: prefer buses with fewer instructors
     if group.is_instructor_group and day_buses and all_day_groups:
@@ -181,6 +188,7 @@ def _improve_assignments(
     groups: list[SolverGroup],
     buses_by_day: dict[str, list[SolverBus]],
     weights: ConstraintWeights,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> dict[tuple[str, str], str]:
     """Improve assignments via swaps and moves, considering all constraint weights."""
     assignments = dict(assignments)
@@ -194,10 +202,10 @@ def _improve_assignments(
 
             for i, group_a in enumerate(day_groups):
                 for group_b in day_groups[i + 1 :]:
-                    if _try_swap(group_a, group_b, day, assignments, groups_by_id, day_buses, day_groups, weights):
+                    if _try_swap(group_a, group_b, day, assignments, groups_by_id, day_buses, day_groups, weights, pref_weights):
                         improved = True
 
-                if _try_move(group_a, day, assignments, groups_by_id, day_buses, day_groups, weights):
+                if _try_move(group_a, day, assignments, groups_by_id, day_buses, day_groups, weights, pref_weights):
                     improved = True
 
     return assignments
@@ -210,6 +218,7 @@ def _compute_group_score(
     all_groups: dict[str, SolverGroup],
     weights: ConstraintWeights,
     day_buses: list[SolverBus] | None = None,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> float:
     """Full score for a group's current placement: consistency + preferences + distribution."""
     score = 0.0
@@ -230,7 +239,9 @@ def _compute_group_score(
     for preferred_id in group.preferred_groups:
         their_bus = assignments.get((preferred_id, day))
         if my_bus and their_bus and my_bus == their_bus:
-            score += weights.ride_together
+            pair = (min(group.id, preferred_id), max(group.id, preferred_id))
+            pw = (pref_weights or {}).get(pair, 1.0)
+            score += weights.ride_together * pw
 
     # Instructor distribution
     if group.is_instructor_group and my_bus and day_buses:
@@ -263,6 +274,7 @@ def _try_swap(
     day_buses: list[SolverBus],
     day_groups: list[SolverGroup],
     weights: ConstraintWeights,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> bool:
     bus_a = assignments[(group_a.id, day)]
     bus_b = assignments[(group_b.id, day)]
@@ -278,16 +290,16 @@ def _try_swap(
         return False
 
     score_before = (
-        _compute_group_score(group_a, day, assignments, groups_by_id, weights, day_buses)
-        + _compute_group_score(group_b, day, assignments, groups_by_id, weights, day_buses)
+        _compute_group_score(group_a, day, assignments, groups_by_id, weights, day_buses, pref_weights)
+        + _compute_group_score(group_b, day, assignments, groups_by_id, weights, day_buses, pref_weights)
     )
 
     assignments[(group_a.id, day)] = bus_b
     assignments[(group_b.id, day)] = bus_a
 
     score_after = (
-        _compute_group_score(group_a, day, assignments, groups_by_id, weights, day_buses)
-        + _compute_group_score(group_b, day, assignments, groups_by_id, weights, day_buses)
+        _compute_group_score(group_a, day, assignments, groups_by_id, weights, day_buses, pref_weights)
+        + _compute_group_score(group_b, day, assignments, groups_by_id, weights, day_buses, pref_weights)
     )
 
     if score_after > score_before:
@@ -306,9 +318,10 @@ def _try_move(
     day_buses: list[SolverBus],
     day_groups: list[SolverGroup],
     weights: ConstraintWeights,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> bool:
     current_bus = assignments[(group.id, day)]
-    score_before = _compute_group_score(group, day, assignments, groups_by_id, weights, day_buses)
+    score_before = _compute_group_score(group, day, assignments, groups_by_id, weights, day_buses, pref_weights)
 
     bus_capacities = {b.name: b.effective_capacity for b in day_buses}
     loads = _current_bus_loads(assignments, day, groups_by_id)
@@ -323,7 +336,7 @@ def _try_move(
             continue
 
         assignments[(group.id, day)] = bus.name
-        score = _compute_group_score(group, day, assignments, groups_by_id, weights, day_buses)
+        score = _compute_group_score(group, day, assignments, groups_by_id, weights, day_buses, pref_weights)
         if score > best_score:
             best_score = score
             best_bus = bus.name
@@ -358,6 +371,7 @@ def _compute_score(
     groups: list[SolverGroup],
     buses_by_day: dict[str, list[SolverBus]],
     weights: ConstraintWeights,
+    pref_weights: dict[tuple[str, str], float] | None = None,
 ) -> float:
     groups_by_id = {g.id: g for g in groups}
     score = 0.0
@@ -367,5 +381,6 @@ def _compute_score(
                 score += _compute_group_score(
                     group, day, assignments, groups_by_id, weights,
                     day_buses=buses_by_day.get(day),
+                    pref_weights=pref_weights,
                 )
     return score

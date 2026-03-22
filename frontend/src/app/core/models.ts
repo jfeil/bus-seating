@@ -61,6 +61,7 @@ export interface RidePreference {
   season_id: string;
   group_a_id: string;
   group_b_id: string;
+  weight: number;
 }
 
 export interface PersonPreference {
@@ -72,6 +73,7 @@ export interface PersonPreference {
   person_b_name: string;
   group_a_name: string;
   group_b_name: string;
+  weight: number;
 }
 
 export interface PersonAbsence {
@@ -95,10 +97,19 @@ export interface Assignment {
   bus_id: string;
 }
 
+export interface UnmetPreference {
+  type: 'ride' | 'person';
+  preference_id: string;
+  group_a_name: string;
+  group_b_name: string;
+  weight: number;
+  details: string;
+}
+
 export interface SolveResult {
   assignments: Record<string, Record<string, string>>;
   score: number;
-  unmet_preferences: string[][];
+  unmet_preferences: UnmetPreference[];
 }
 
 export interface SeatingPlanPerson {

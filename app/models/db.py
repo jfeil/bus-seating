@@ -122,6 +122,7 @@ class RidePreference(Base):
     season_id: Mapped[str] = mapped_column(ForeignKey("seasons.id"), nullable=False)
     group_a_id: Mapped[str] = mapped_column(ForeignKey("groups.id"), nullable=False)
     group_b_id: Mapped[str] = mapped_column(ForeignKey("groups.id"), nullable=False)
+    weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     season: Mapped["Season"] = relationship(back_populates="ride_preferences")
     group_a: Mapped["Group"] = relationship(foreign_keys=[group_a_id])
@@ -136,6 +137,7 @@ class PersonPreference(Base):
     season_id: Mapped[str] = mapped_column(ForeignKey("seasons.id"), nullable=False)
     person_a_id: Mapped[str] = mapped_column(ForeignKey("persons.id"), nullable=False)
     person_b_id: Mapped[str] = mapped_column(ForeignKey("persons.id"), nullable=False)
+    weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     season: Mapped["Season"] = relationship(back_populates="person_preferences")
     person_a: Mapped["Person"] = relationship(foreign_keys=[person_a_id])

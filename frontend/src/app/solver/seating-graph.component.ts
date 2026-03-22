@@ -1,6 +1,7 @@
-import { Component, Input, OnChanges, ElementRef, ViewChild, AfterViewInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, ElementRef, ViewChild, AfterViewInit, SimpleChanges, effect } from '@angular/core';
 import * as d3 from 'd3';
 import { Group, Bus, SeatingPlanEntry, RidePreference, PERSON_TYPE_CONFIG } from '../core/models';
+import { ThemeService } from '../core/theme.service';
 
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
@@ -20,43 +21,94 @@ const BUS_COLORS = ['#42a5f5', '#66bb6a', '#ffa726', '#ef5350', '#ab47bc', '#26c
 @Component({
   selector: 'app-seating-graph',
   standalone: true,
-  template: `<div #graphContainer class="graph-container"></div>`,
+  template: `<div #graphContainer class="graph-container" [class.expanded]="expanded"></div>`,
   styles: [`
     .graph-container {
       width: 100%;
-      height: 500px;
-      border: 1px solid #e0e0e0;
+      height: 400px;
+      border: 1px solid var(--border-color);
       border-radius: 4px;
-      background: #fafafa;
+      background: var(--surface-container);
       overflow: hidden;
+      cursor: grab;
+      transition: height 0.3s ease;
     }
+    .graph-container:active { cursor: grabbing; }
+    .graph-container.expanded { height: 80vh; }
   `],
 })
-export class SeatingGraphComponent implements AfterViewInit, OnChanges {
+export class SeatingGraphComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('graphContainer') container!: ElementRef<HTMLDivElement>;
   @Input() groups: Group[] = [];
   @Input() buses: Bus[] = [];
   @Input() seatingPlan: SeatingPlanEntry[] = [];
   @Input() preferences: RidePreference[] = [];
 
+  @Input() expanded = false;
+
   private svg: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
   private initialized = false;
+  private resizeTimer: any;
+  private resizeObserver: ResizeObserver | null = null;
+  private lastRenderedHeight = 0;
+
+  constructor(private theme: ThemeService) {
+    effect(() => {
+      this.theme.isDark(); // track signal
+      if (this.initialized) {
+        this.scheduleRender();
+      }
+    });
+  }
 
   ngAfterViewInit() {
     this.initialized = true;
-    this.render();
+
+    // Use ResizeObserver to re-render when container gets its final size (tab switch, expand)
+    this.resizeObserver = new ResizeObserver(() => {
+      const h = this.container.nativeElement.clientHeight;
+      if (h > 0 && h !== this.lastRenderedHeight) {
+        this.lastRenderedHeight = h;
+        clearTimeout(this.resizeTimer);
+        this.resizeTimer = setTimeout(() => this.render(), 50);
+      }
+    });
+    this.resizeObserver.observe(this.container.nativeElement);
+
+    this.scheduleRender();
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver?.disconnect();
+    clearTimeout(this.resizeTimer);
   }
 
   ngOnChanges(changes: SimpleChanges) {
     if (this.initialized) {
-      this.render();
+      this.scheduleRender();
     }
+  }
+
+  private scheduleRender() {
+    clearTimeout(this.resizeTimer);
+    this.resizeTimer = setTimeout(() => this.render(), 0);
+  }
+
+  private get isDark(): boolean {
+    return this.theme.isDark();
   }
 
   private render() {
     const el = this.container.nativeElement;
     const width = el.clientWidth || 800;
     const height = el.clientHeight || 500;
+
+    const dark = this.isDark;
+    const textColor = dark ? '#e0e0e0' : '#333';
+    const textSecondary = dark ? '#999' : '#888';
+    const accentColor = dark ? '#64b5f6' : '#1976d2';
+    const nodeStroke = dark ? '#444' : '#fff';
+    const unassignedColor = dark ? '#666' : '#bdbdbd';
 
     d3.select(el).selectAll('*').remove();
     this.svg = d3.select(el).append('svg').attr('width', width).attr('height', height);
@@ -67,7 +119,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
     if (nodes.length === 0) {
       this.svg.append('text')
         .attr('x', width / 2).attr('y', height / 2)
-        .attr('text-anchor', 'middle').attr('fill', '#999')
+        .attr('text-anchor', 'middle').attr('fill', textSecondary)
         .text('No data to display. Add groups and run the solver.');
       return;
     }
@@ -83,17 +135,29 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
         n.busName = busName;
         n.color = colorScale(busName);
       } else {
-        n.color = '#bdbdbd';
+        n.color = unassignedColor;
       }
     });
 
-    // Legend
+    // Zoom/pan container
+    const zoomGroup = this.svg.append('g');
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.3, 5])
+      .on('zoom', (event) => zoomGroup.attr('transform', event.transform));
+    this.svg.call(zoom);
+
+    // Legend (fixed, outside zoom group)
     const legend = this.svg.append('g').attr('transform', 'translate(10, 10)');
     busNames.forEach((name, i) => {
-      const g = legend.append('g').attr('transform', `translate(0, ${i * 22})`);
-      g.append('rect').attr('width', 16).attr('height', 16).attr('rx', 3).attr('fill', colorScale(name));
-      g.append('text').attr('x', 22).attr('y', 13).attr('font-size', '12px').attr('fill', '#333').text(name);
+      const lg = legend.append('g').attr('transform', `translate(0, ${i * 22})`);
+      lg.append('rect').attr('width', 16).attr('height', 16).attr('rx', 3).attr('fill', colorScale(name));
+      lg.append('text').attr('x', 22).attr('y', 13).attr('font-size', '12px').attr('fill', textColor).text(name);
     });
+    // Instructor marker legend
+    const instructorLg = legend.append('g').attr('transform', `translate(0, ${busNames.length * 22})`);
+    instructorLg.append('circle').attr('cx', 8).attr('cy', 8).attr('r', 7)
+      .attr('fill', 'none').attr('stroke', accentColor).attr('stroke-width', 3);
+    instructorLg.append('text').attr('x', 22).attr('y', 13).attr('font-size', '12px').attr('fill', textColor).text('Instructor group');
 
     // Force simulation
     const simulation = d3.forceSimulation(nodes)
@@ -126,7 +190,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
     }
 
     // Draw links
-    const link = this.svg.append('g')
+    const link = zoomGroup.append('g')
       .selectAll('line')
       .data(links)
       .join('line')
@@ -136,7 +200,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
       .attr('opacity', 0.6);
 
     // Draw nodes
-    const node = this.svg.append('g')
+    const node = zoomGroup.append('g')
       .selectAll('g')
       .data(nodes)
       .join('g')
@@ -155,7 +219,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
     node.append('circle')
       .attr('r', d => d.size * 4 + 6)
       .attr('fill', d => d.color!)
-      .attr('stroke', d => d.isInstructor ? '#1565c0' : '#fff')
+      .attr('stroke', d => d.isInstructor ? accentColor : nodeStroke)
       .attr('stroke-width', d => d.isInstructor ? 3 : 1.5);
 
     node.append('text')
@@ -163,7 +227,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
       .attr('text-anchor', 'middle')
       .attr('dy', d => d.size * 4 + 18)
       .attr('font-size', '11px')
-      .attr('fill', '#333');
+      .attr('fill', textColor);
 
     // Size label inside node
     node.append('text')
@@ -186,12 +250,26 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges {
   }
 
   private buildNodes(): GraphNode[] {
-    return this.groups.map(g => ({
-      id: g.id,
-      label: g.name,
-      size: g.members.length,
-      isInstructor: g.members.some(m => PERSON_TYPE_CONFIG[m.person_type].isInstructorLike),
-    }));
+    // Build a map of group sizes from the seating plan (reflects absences for this day)
+    const planSizes = new Map<string, { size: number; isInstructor: boolean }>();
+    for (const bus of this.seatingPlan) {
+      for (const group of bus.groups) {
+        planSizes.set(group.group_id, {
+          size: group.members.length,
+          isInstructor: group.is_instructor_group,
+        });
+      }
+    }
+
+    return this.groups.map(g => {
+      const planInfo = planSizes.get(g.id);
+      return {
+        id: g.id,
+        label: g.name,
+        size: planInfo ? planInfo.size : g.members.length,
+        isInstructor: planInfo ? planInfo.isInstructor : g.members.some(m => PERSON_TYPE_CONFIG[m.person_type].isInstructorLike),
+      };
+    });
   }
 
   private buildLinks(nodes: GraphNode[]): GraphLink[] {

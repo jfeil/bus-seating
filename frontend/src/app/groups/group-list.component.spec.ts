@@ -156,14 +156,14 @@ describe('GroupListComponent', () => {
 
     const req = httpMock.expectOne(r => r.method === 'POST' && r.url === '/api/seasons/s1/ride-preferences');
     expect(req.request.body).toEqual({ group_a_id: 'g1', group_b_id: 'g2' });
-    req.flush({ id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' });
+    req.flush({ id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2', weight: 1 });
     tick();
 
     httpMock.expectOne('/api/seasons/s1/groups').flush([]);
     httpMock.expectOne('/api/seasons/s1/days').flush([]);
     httpMock.expectOne('/api/seasons/s1/registrations').flush([]);
     httpMock.expectOne('/api/seasons/s1/ride-preferences').flush([
-      { id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2' },
+      { id: 'pr1', season_id: 's1', group_a_id: 'g1', group_b_id: 'g2', weight: 1 },
     ]);
     httpMock.expectOne('/api/seasons/s1/person-preferences').flush([]);
     httpMock.expectOne('/api/seasons/s1/person-absences').flush([]);

@@ -2,6 +2,7 @@ import csv
 import io
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -18,10 +19,12 @@ from app.schemas.group import (
     PersonRead,
     PersonPreferenceCreate,
     PersonPreferenceRead,
+    PersonPreferenceUpdate,
     PERSON_TYPES,
     RegistrationRead,
     RidePreferenceCreate,
     RidePreferenceRead,
+    RidePreferenceUpdate,
 )
 
 router = APIRouter(prefix="/api/seasons/{season_id}", tags=["groups"])
@@ -78,6 +81,18 @@ def update_group(season_id: str, group_id: str, body: GroupUpdate, db: Session =
     db.commit()
     db.refresh(group)
     return group
+
+
+@router.delete("/groups", status_code=204)
+def delete_all_groups(season_id: str, db: Session = Depends(get_db)):
+    # Delete preferences first (no cascade from groups)
+    for pref in db.scalars(select(RidePreference).where(RidePreference.season_id == season_id)).all():
+        db.delete(pref)
+    for pref in db.scalars(select(PersonPreference).where(PersonPreference.season_id == season_id)).all():
+        db.delete(pref)
+    for group in db.scalars(select(Group).where(Group.season_id == season_id)).all():
+        db.delete(group)
+    db.commit()
 
 
 @router.delete("/groups/{group_id}", status_code=204)
@@ -186,6 +201,19 @@ def list_ride_preferences(season_id: str, db: Session = Depends(get_db)):
     ).all()
 
 
+@router.patch("/ride-preferences/{preference_id}", response_model=RidePreferenceRead)
+def update_ride_preference(
+    season_id: str, preference_id: str, body: RidePreferenceUpdate, db: Session = Depends(get_db)
+):
+    pref = db.get(RidePreference, preference_id)
+    if not pref or pref.season_id != season_id:
+        raise HTTPException(404, "Preference not found")
+    pref.weight = body.weight
+    db.commit()
+    db.refresh(pref)
+    return pref
+
+
 @router.delete("/ride-preferences/{preference_id}", status_code=204)
 def delete_ride_preference(season_id: str, preference_id: str, db: Session = Depends(get_db)):
     pref = db.get(RidePreference, preference_id)
@@ -249,6 +277,31 @@ def list_person_preferences(season_id: str, db: Session = Depends(get_db)):
         )
         for p in prefs
     ]
+
+
+@router.patch("/person-preferences/{preference_id}", response_model=PersonPreferenceRead)
+def update_person_preference(
+    season_id: str, preference_id: str, body: PersonPreferenceUpdate, db: Session = Depends(get_db)
+):
+    pref = db.get(PersonPreference, preference_id)
+    if not pref or pref.season_id != season_id:
+        raise HTTPException(404, "Preference not found")
+    pref.weight = body.weight
+    db.commit()
+    db.refresh(pref)
+    person_a = db.get(Person, pref.person_a_id)
+    person_b = db.get(Person, pref.person_b_id)
+    return PersonPreferenceRead(
+        id=pref.id,
+        season_id=pref.season_id,
+        person_a_id=pref.person_a_id,
+        person_b_id=pref.person_b_id,
+        person_a_name=person_a.full_name,
+        person_b_name=person_b.full_name,
+        group_a_name=person_a.group.name,
+        group_b_name=person_b.group.name,
+        weight=pref.weight,
+    )
 
 
 @router.delete("/person-preferences/{preference_id}", status_code=204)
@@ -343,6 +396,8 @@ class CsvImportResult(BaseModel):
     groups_created: int
     persons_created: int
     absences_created: int
+    person_preferences_created: int = 0
+    ride_preferences_created: int = 0
 
 
 @router.post("/import-csv", response_model=CsvImportResult)
@@ -377,6 +432,9 @@ def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get
     except StopIteration:
         raise HTTPException(400, "Missing 'Busgruppe' column")
 
+    # Optional Fahrtwunsch column
+    pref_col = next((i for i, h in enumerate(header_lower) if h == "fahrtwunsch"), None)
+
     # Tag columns are everything not a known column
     known_cols = {type_col, group_col}
     if first_name_col is not None:
@@ -385,15 +443,26 @@ def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get
         known_cols.add(last_name_col)
     if name_col is not None:
         known_cols.add(name_col)
+    if pref_col is not None:
+        known_cols.add(pref_col)
     tag_cols = [i for i in range(len(header)) if i not in known_cols]
     day_names = [header[i] for i in tag_cols]
 
-    # Create days
+    # Reuse existing days or create new ones
+    existing_days = {
+        d.name: d
+        for d in db.scalars(select(SkiDay).where(SkiDay.season_id == season_id)).all()
+    }
     days: list[SkiDay] = []
+    days_created_count = 0
     for day_name in day_names:
-        day = SkiDay(season_id=season_id, name=day_name)
-        db.add(day)
-        days.append(day)
+        if day_name in existing_days:
+            days.append(existing_days[day_name])
+        else:
+            day = SkiDay(season_id=season_id, name=day_name)
+            db.add(day)
+            days.append(day)
+            days_created_count += 1
     db.flush()
 
     # Parse rows
@@ -427,12 +496,14 @@ def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get
             days[idx].id: row[tag_cols[idx]].strip().lower() in _ATTENDING_MARKERS
             for idx in range(len(tag_cols))
         }
+        pref_raw = row[pref_col].strip() if pref_col is not None else ""
         rows.append({
             "first_name": first_name,
             "last_name": last_name,
             "person_type": person_type,
             "group_key": group_key,
             "day_attendance": day_attendance,
+            "fahrtwunsch": pref_raw,
         })
 
     # Group rows by group_key; empty key = solo group
@@ -451,8 +522,13 @@ def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get
     persons_created = 0
     absences_created = 0
 
+    # Track mappings for preference resolution
+    group_by_key: dict[str, Group] = {}
+    person_by_full_name: dict[str, Person] = {}
+    person_to_row: list[tuple[Person, dict]] = []  # (person, row_dict)
+
     for group_key, members in groups_by_key.items():
-        group_name = f"Busgruppe {group_key}" if not group_key.startswith("__solo_") else f"{members[0]['first_name']} {members[0]['last_name']}".strip()
+        group_name = f"{members[0]['first_name']} {members[0]['last_name']}".strip() if group_key.startswith("__solo_") else group_key
         group = Group(season_id=season_id, name=group_name)
 
         persons: list[tuple[Person, dict[str, bool]]] = []
@@ -460,9 +536,14 @@ def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get
             person = Person(first_name=m["first_name"], last_name=m["last_name"], person_type=m["person_type"])
             group.members.append(person)
             persons.append((person, m["day_attendance"]))
+            full_name = f"{m['first_name']} {m['last_name']}".strip().lower()
+            person_by_full_name[full_name] = person
+            if m["fahrtwunsch"]:
+                person_to_row.append((person, m))
 
         db.add(group)
         db.flush()
+        group_by_key[group_key] = group
         persons_created += len(persons)
 
         # Register group for days where at least one member attends
@@ -479,11 +560,145 @@ def import_csv(season_id: str, body: CsvImportRequest, db: Session = Depends(get
 
         groups_created += 1
 
+    # Resolve Fahrtwunsch preferences
+    person_pref_pairs: set[tuple[str, str]] = set()  # normalized (min_id, max_id)
+    ride_pref_pairs: set[tuple[str, str]] = set()
+
+    for person, row_data in person_to_row:
+        entries = [e.strip() for e in row_data["fahrtwunsch"].split(";") if e.strip()]
+        for entry in entries:
+            if entry.startswith("#"):
+                # Group reference → RidePreference
+                ref_key = entry[1:]
+                target_group = group_by_key.get(ref_key)
+                if target_group and target_group.id != person.group_id:
+                    pair = (min(person.group_id, target_group.id), max(person.group_id, target_group.id))
+                    ride_pref_pairs.add(pair)
+            else:
+                # Person name reference → PersonPreference
+                target = person_by_full_name.get(entry.lower())
+                if target and target.id != person.id:
+                    pair = (min(person.id, target.id), max(person.id, target.id))
+                    person_pref_pairs.add(pair)
+
+    person_prefs_created = 0
+    for a_id, b_id in person_pref_pairs:
+        db.add(PersonPreference(season_id=season_id, person_a_id=a_id, person_b_id=b_id))
+        person_prefs_created += 1
+
+    ride_prefs_created = 0
+    for a_id, b_id in ride_pref_pairs:
+        db.add(RidePreference(season_id=season_id, group_a_id=a_id, group_b_id=b_id))
+        ride_prefs_created += 1
+
     db.commit()
 
     return CsvImportResult(
-        days_created=len(days),
+        days_created=days_created_count,
         groups_created=groups_created,
         persons_created=persons_created,
         absences_created=absences_created,
+        person_preferences_created=person_prefs_created,
+        ride_preferences_created=ride_prefs_created,
     )
+
+
+@router.get("/export-csv")
+def export_csv(season_id: str, db: Session = Depends(get_db)):
+    # Load all data
+    days = db.scalars(select(SkiDay).where(SkiDay.season_id == season_id)).all()
+    groups = db.scalars(
+        select(Group)
+        .where(Group.season_id == season_id)
+        .options(selectinload(Group.members), selectinload(Group.registrations))
+    ).all()
+    absences = db.scalars(
+        select(PersonAbsence)
+        .join(Person)
+        .join(Group)
+        .where(Group.season_id == season_id)
+    ).all()
+    ride_prefs = db.scalars(
+        select(RidePreference).where(RidePreference.season_id == season_id)
+    ).all()
+    person_prefs = db.scalars(
+        select(PersonPreference)
+        .where(PersonPreference.season_id == season_id)
+        .options(
+            selectinload(PersonPreference.person_a),
+            selectinload(PersonPreference.person_b),
+        )
+    ).all()
+
+    # Build lookup maps
+    absent_set = {(a.person_id, a.ski_day_id) for a in absences}
+    group_by_id = {g.id: g for g in groups}
+    person_by_id: dict[str, Person] = {}
+    for g in groups:
+        for m in g.members:
+            person_by_id[m.id] = m
+
+    # Group registered day IDs
+    group_day_ids: dict[str, set[str]] = {}
+    for g in groups:
+        group_day_ids[g.id] = {r.ski_day_id for r in g.registrations}
+
+    # Build person→Fahrtwunsch entries
+    person_fahrtwunsch: dict[str, list[str]] = {}
+
+    # Ride preferences: attribute to first member of group_a, reference #group_b_name
+    # Track which pairs we've already emitted to avoid duplicates
+    emitted_ride_pairs: set[tuple[str, str]] = set()
+    for rp in ride_prefs:
+        pair = (min(rp.group_a_id, rp.group_b_id), max(rp.group_a_id, rp.group_b_id))
+        if pair in emitted_ride_pairs:
+            continue
+        emitted_ride_pairs.add(pair)
+        ga = group_by_id.get(rp.group_a_id)
+        gb = group_by_id.get(rp.group_b_id)
+        if ga and gb and ga.members:
+            person_id = ga.members[0].id
+            person_fahrtwunsch.setdefault(person_id, []).append(f"#{gb.name}")
+
+    # Person preferences: attribute to person_a, reference person_b full name
+    emitted_person_pairs: set[tuple[str, str]] = set()
+    for pp in person_prefs:
+        pair = (min(pp.person_a_id, pp.person_b_id), max(pp.person_a_id, pp.person_b_id))
+        if pair in emitted_person_pairs:
+            continue
+        emitted_person_pairs.add(pair)
+        pa = person_by_id.get(pp.person_a_id)
+        pb = person_by_id.get(pp.person_b_id)
+        if pa and pb:
+            person_fahrtwunsch.setdefault(pa.id, []).append(pb.full_name)
+
+    # Write CSV
+    output = io.StringIO()
+    day_names = [d.name for d in days]
+    header = ["first_name", "last_name", "Type", *day_names, "Busgruppe", "Fahrtwunsch"]
+    writer = csv.writer(output)
+    writer.writerow(header)
+
+    for g in groups:
+        for m in g.members:
+            day_markers = []
+            for d in days:
+                if d.id in group_day_ids.get(g.id, set()):
+                    if (m.id, d.id) in absent_set:
+                        day_markers.append("")
+                    else:
+                        day_markers.append("x")
+                else:
+                    day_markers.append("")
+
+            fahrtwunsch = ";".join(person_fahrtwunsch.get(m.id, []))
+            writer.writerow([
+                m.first_name,
+                m.last_name,
+                m.person_type.capitalize(),
+                *day_markers,
+                g.name,
+                fahrtwunsch,
+            ])
+
+    return PlainTextResponse(content=output.getvalue(), media_type="text/csv")

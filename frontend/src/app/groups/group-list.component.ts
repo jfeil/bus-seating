@@ -47,7 +47,17 @@ import {
     MatAutocompleteModule,
   ],
   template: `
-    <h2>Groups & People</h2>
+    <div class="header-row">
+      <h2>Groups & People</h2>
+      @if (groups().length > 0) {
+        <button mat-button (click)="exportCsv()">
+          <mat-icon>download</mat-icon> Export CSV
+        </button>
+        <button mat-button color="warn" (click)="clearAll()">
+          <mat-icon>delete_sweep</mat-icon> Clear All
+        </button>
+      }
+    </div>
 
     <!-- Create Group Form -->
     <mat-card class="create-card">
@@ -288,20 +298,40 @@ import {
         <div class="pref-form">
           <mat-form-field>
             <mat-label>Group A</mat-label>
-            <mat-select [(ngModel)]="prefGroupA">
-              @for (g of groups(); track g.id) {
+            <input
+              matInput
+              [formControl]="groupAControl"
+              [matAutocomplete]="autoGroupA"
+              placeholder="Type a group name..."
+            />
+            <mat-autocomplete
+              #autoGroupA="matAutocomplete"
+              [displayWith]="displayGroup.bind(this)"
+              (optionSelected)="prefGroupA = $event.option.value"
+            >
+              @for (g of filterGroups(groupAControl.value); track g.id) {
                 <mat-option [value]="g.id">{{ g.name }}</mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
           <mat-icon>link</mat-icon>
           <mat-form-field>
             <mat-label>Group B</mat-label>
-            <mat-select [(ngModel)]="prefGroupB">
-              @for (g of groups(); track g.id) {
+            <input
+              matInput
+              [formControl]="groupBControl"
+              [matAutocomplete]="autoGroupB"
+              placeholder="Type a group name..."
+            />
+            <mat-autocomplete
+              #autoGroupB="matAutocomplete"
+              [displayWith]="displayGroup.bind(this)"
+              (optionSelected)="prefGroupB = $event.option.value"
+            >
+              @for (g of filterGroups(groupBControl.value); track g.id) {
                 <mat-option [value]="g.id">{{ g.name }}</mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
           <button
             mat-raised-button
@@ -428,6 +458,14 @@ import {
   `,
   styles: [
     `
+      .header-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .header-row h2 {
+        margin: 0;
+      }
       .create-card,
       .csv-card {
         margin-bottom: 1.5rem;
@@ -557,6 +595,8 @@ export class GroupListComponent implements OnInit {
 
   prefGroupA = '';
   prefGroupB = '';
+  groupAControl = new FormControl('');
+  groupBControl = new FormControl('');
 
   // Person preference autocomplete
   personAControl = new FormControl('');
@@ -644,6 +684,24 @@ export class GroupListComponent implements OnInit {
     }
   }
 
+  clearAll() {
+    if (confirm('Delete all groups, members, registrations, and preferences?')) {
+      this.api.deleteAllGroups(this.seasonId).subscribe(() => this.loadAll());
+    }
+  }
+
+  exportCsv() {
+    this.api.exportCsv(this.seasonId).subscribe(csv => {
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'groups-export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
   getGroupDayNames(groupId: string): string[] {
     const dayIds = this.registrations()
       .filter((r) => r.group_id === groupId)
@@ -669,6 +727,8 @@ export class GroupListComponent implements OnInit {
       .subscribe(() => {
         this.prefGroupA = '';
         this.prefGroupB = '';
+        this.groupAControl.reset('');
+        this.groupBControl.reset('');
         this.loadAll();
       });
   }
@@ -680,6 +740,18 @@ export class GroupListComponent implements OnInit {
   }
 
   // --- Person Preferences ---
+
+  filterGroups(query: string | null): Group[] {
+    const all = this.groups();
+    if (!query || typeof query !== 'string') return all;
+    const lower = query.toLowerCase();
+    return all.filter((g) => g.name.toLowerCase().includes(lower));
+  }
+
+  displayGroup(groupId: string): string {
+    if (!groupId) return '';
+    return this.groups().find((g) => g.id === groupId)?.name || '';
+  }
 
   filterPersons(query: string | null): Person[] {
     const all = this.allPersons;

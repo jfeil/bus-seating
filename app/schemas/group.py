@@ -81,8 +81,13 @@ class RidePreferenceRead(BaseModel):
     season_id: str
     group_a_id: str
     group_b_id: str
+    weight: float = 1.0
 
     model_config = {"from_attributes": True}
+
+
+class RidePreferenceUpdate(BaseModel):
+    weight: float
 
 
 class PersonPreferenceCreate(BaseModel):
@@ -99,3 +104,8 @@ class PersonPreferenceRead(BaseModel):
     person_b_name: str
     group_a_name: str
     group_b_name: str
+    weight: float = 1.0
+
+
+class PersonPreferenceUpdate(BaseModel):
+    weight: float
