@@ -7,6 +7,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);
   return next(req).pipe(
     catchError(error => {
+      // Don't show toasts for health check polling during startup
+      if (req.url.endsWith('/api/health')) {
+        return throwError(() => error);
+      }
       let message: string;
       if (error.status === 0) {
         message = 'Backend not reachable — is the server running?';

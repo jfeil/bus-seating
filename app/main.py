@@ -23,6 +23,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
 app.include_router(seasons.router)
 app.include_router(days.router)
 app.include_router(buses.router)
