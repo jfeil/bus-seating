@@ -1,3 +1,4 @@
+// Karma configuration file
 module.exports = function (config) {
   config.set({
     basePath: '',
@@ -7,28 +8,31 @@ module.exports = function (config) {
       require('karma-chrome-launcher'),
       require('karma-jasmine-html-reporter'),
       require('karma-coverage'),
-      require('@angular-devkit/build-angular/plugins/karma'),
+      require('@angular-devkit/build-angular/plugins/karma')
     ],
     client: {
       jasmine: {},
-      clearContext: false,
+      clearContext: false
     },
     jasmineHtmlReporter: {
-      suppressAll: true,
+      suppressAll: true
     },
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage/frontend'),
       subdir: '.',
-      reporters: [{ type: 'html' }, { type: 'text-summary' }],
+      reporters: [
+        { type: 'html' },
+        { type: 'text-summary' }
+      ]
     },
     reporters: ['progress', 'kjhtml'],
-    browsers: ['ChromeHeadlessNoSandbox'],
+    browsers: ['ChromeHeadless'],
     customLaunchers: {
       ChromeHeadlessNoSandbox: {
         base: 'ChromeHeadless',
-        flags: ['--no-sandbox'],
-      },
+        flags: ['--no-sandbox']
+      }
     },
-    restartOnFileChange: true,
+    restartOnFileChange: true
   });
 };
