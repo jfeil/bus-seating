@@ -4,12 +4,6 @@ use tauri_plugin_shell::process::CommandEvent;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Enable hardware-accelerated rendering in WebKitGTK (Linux)
-    #[cfg(target_os = "linux")]
-    {
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-    }
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {

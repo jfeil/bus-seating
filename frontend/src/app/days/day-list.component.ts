@@ -153,12 +153,20 @@ export class DayListComponent implements OnInit {
     return this.busesMap()[dayId] || [];
   }
 
+  private submitting = false;
+
   addDay() {
+    if (this.submitting) return;
+    this.submitting = true;
     const name = this.newDayName.trim() || `Day ${this.days().length + 1}`;
-    this.api.createDay(this.seasonId, name, this.newDayDate || undefined).subscribe(() => {
-      this.newDayName = '';
-      this.newDayDate = '';
-      this.loadAll();
+    this.api.createDay(this.seasonId, name, this.newDayDate || undefined).subscribe({
+      next: () => {
+        this.newDayName = '';
+        this.newDayDate = '';
+        this.loadAll();
+      },
+      complete: () => this.submitting = false,
+      error: () => this.submitting = false,
     });
   }
 
@@ -168,16 +176,24 @@ export class DayListComponent implements OnInit {
     }
   }
 
+  private busSubmitting: Record<string, boolean> = {};
+
   addBus(dayId: string) {
+    if (this.busSubmitting[dayId]) return;
+    this.busSubmitting[dayId] = true;
     const existingBuses = this.getBuses(dayId);
     const name = (this.newBusNames[dayId] || '').trim() || `Bus ${existingBuses.length + 1}`;
     const capacity = this.newBusCapacities[dayId] || 50;
     const reserved = this.newBusReserved[dayId] || 0;
-    this.api.createBus(this.seasonId, dayId, { name, capacity, reserved_seats: reserved }).subscribe(() => {
-      this.newBusNames[dayId] = '';
-      this.newBusCapacities[dayId] = 0;
-      this.newBusReserved[dayId] = 0;
-      this.loadBuses(dayId);
+    this.api.createBus(this.seasonId, dayId, { name, capacity, reserved_seats: reserved }).subscribe({
+      next: () => {
+        this.newBusNames[dayId] = '';
+        this.newBusCapacities[dayId] = 0;
+        this.newBusReserved[dayId] = 0;
+        this.loadBuses(dayId);
+      },
+      complete: () => this.busSubmitting[dayId] = false,
+      error: () => this.busSubmitting[dayId] = false,
     });
   }
 

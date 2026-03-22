@@ -79,12 +79,19 @@ export class SeasonListComponent implements OnInit {
     this.api.getSeasons().subscribe(s => this.seasons.set(s));
   }
 
+  private submitting = false;
+
   create() {
     const name = this.newName.trim();
-    if (!name) return;
-    this.api.createSeason(name).subscribe(() => {
-      this.newName = '';
-      this.load();
+    if (!name || this.submitting) return;
+    this.submitting = true;
+    this.api.createSeason(name).subscribe({
+      next: () => {
+        this.newName = '';
+        this.load();
+      },
+      complete: () => this.submitting = false,
+      error: () => this.submitting = false,
     });
   }
 
