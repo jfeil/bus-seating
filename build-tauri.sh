@@ -128,9 +128,50 @@ if [[ "$(uname -s)" == "Linux" ]]; then
     "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage" || true
 fi
 
-# --- 5. Build Tauri app ---
+# --- 5. Build standalone Linux executable (browser-based, no WebKitGTK) ---
+if [[ "$(uname -s)" == "Linux" ]]; then
+  echo "==> Building standalone Linux executable..."
+
+  # Build Angular frontend for production
+  cd frontend
+  npm run build -- --configuration production
+  cd ..
+
+  # Copy static files into app/static for PyInstaller bundling
+  rm -rf app/static
+  cp -r frontend/dist/frontend/browser app/static
+
+  uv run pyinstaller \
+    --onefile \
+    --name bus-seating-planner \
+    --add-data "app${SEP}app" \
+    --hidden-import uvicorn.logging \
+    --hidden-import uvicorn.loops \
+    --hidden-import uvicorn.loops.auto \
+    --hidden-import uvicorn.protocols \
+    --hidden-import uvicorn.protocols.http \
+    --hidden-import uvicorn.protocols.http.auto \
+    --hidden-import uvicorn.protocols.websockets \
+    --hidden-import uvicorn.protocols.websockets.auto \
+    --hidden-import uvicorn.lifespan \
+    --hidden-import uvicorn.lifespan.on \
+    --hidden-import app.main \
+    --collect-submodules app \
+    run_backend.py
+
+  # Clean up bundled static files
+  rm -rf app/static
+
+  echo "==> Standalone executable: dist/bus-seating-planner"
+fi
+
+# --- 6. Build Tauri app ---
 echo "==> Building Tauri app..."
 cargo tauri build --target "$TARGET"
 
 echo ""
-echo "==> Build complete! Artifacts in src-tauri/target/${TARGET}/release/bundle/"
+echo "==> Build complete!"
+echo "    Tauri bundles: src-tauri/target/${TARGET}/release/bundle/"
+if [[ "$(uname -s)" == "Linux" ]]; then
+  echo "    Standalone:    dist/bus-seating-planner"
+fi

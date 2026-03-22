@@ -22,6 +22,7 @@ class Season(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
 
     days: Mapped[list["SkiDay"]] = relationship(back_populates="season", cascade="all, delete-orphan")
+    bus_templates: Mapped[list["BusTemplate"]] = relationship(back_populates="season", cascade="all, delete-orphan")
     groups: Mapped[list["Group"]] = relationship(back_populates="season", cascade="all, delete-orphan")
     ride_preferences: Mapped[list["RidePreference"]] = relationship(
         back_populates="season", cascade="all, delete-orphan"
@@ -32,6 +33,18 @@ class Season(Base):
     constraint_config: Mapped["ConstraintConfig | None"] = relationship(
         back_populates="season", cascade="all, delete-orphan", uselist=False
     )
+
+
+class BusTemplate(Base):
+    __tablename__ = "bus_templates"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=new_uuid)
+    season_id: Mapped[str] = mapped_column(ForeignKey("seasons.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    capacity: Mapped[int] = mapped_column(Integer, nullable=False)
+    reserved_seats: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    season: Mapped["Season"] = relationship(back_populates="bus_templates")
 
 
 class SkiDay(Base):

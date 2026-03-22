@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  Season, SkiDay, Bus, Group, Registration, RidePreference, PersonPreference,
+  Season, SkiDay, Bus, BusTemplate, Group, Registration, RidePreference, PersonPreference,
   PersonAbsence, ConstraintConfig, Assignment, SolveResult, SeatingPlanEntry,
   UnmetPreference,
 } from './models';
@@ -42,6 +42,20 @@ export class ApiService {
   }
   deleteDay(seasonId: string, dayId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/seasons/${seasonId}/days/${dayId}`);
+  }
+
+  // --- Bus Templates ---
+  getBusTemplates(seasonId: string): Observable<BusTemplate[]> {
+    return this.http.get<BusTemplate[]>(`${this.base}/seasons/${seasonId}/bus-templates`);
+  }
+  createBusTemplate(seasonId: string, data: { name: string; capacity: number; reserved_seats?: number }): Observable<BusTemplate> {
+    return this.http.post<BusTemplate>(`${this.base}/seasons/${seasonId}/bus-templates`, data);
+  }
+  updateBusTemplate(seasonId: string, templateId: string, data: Partial<BusTemplate>): Observable<BusTemplate> {
+    return this.http.put<BusTemplate>(`${this.base}/seasons/${seasonId}/bus-templates/${templateId}`, data);
+  }
+  deleteBusTemplate(seasonId: string, templateId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/seasons/${seasonId}/bus-templates/${templateId}`);
   }
 
   // --- Buses ---

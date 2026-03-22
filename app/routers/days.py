@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.db import SkiDay
+from app.models.db import Bus, BusTemplate, SkiDay
 from app.schemas.day import SkiDayCreate, SkiDayRead, SkiDayUpdate
 
 router = APIRouter(prefix="/api/seasons/{season_id}/days", tags=["days"])
@@ -13,6 +13,18 @@ router = APIRouter(prefix="/api/seasons/{season_id}/days", tags=["days"])
 def create_day(season_id: str, body: SkiDayCreate, db: Session = Depends(get_db)):
     day = SkiDay(season_id=season_id, name=body.name, date=body.date)
     db.add(day)
+    db.flush()
+
+    # Auto-create buses from season templates
+    templates = db.scalars(
+        select(BusTemplate).where(BusTemplate.season_id == season_id)
+    ).all()
+    for tpl in templates:
+        db.add(Bus(
+            ski_day_id=day.id, name=tpl.name,
+            capacity=tpl.capacity, reserved_seats=tpl.reserved_seats,
+        ))
+
     db.commit()
     db.refresh(day)
     return day

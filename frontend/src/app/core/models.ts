@@ -18,6 +18,14 @@ export interface Bus {
   reserved_seats: number;
 }
 
+export interface BusTemplate {
+  id: string;
+  season_id: string;
+  name: string;
+  capacity: number;
+  reserved_seats: number;
+}
+
 export type PersonType = 'freifahrer' | 'skikurs' | 'lehrteam';
 
 export interface PersonTypeInfo {
