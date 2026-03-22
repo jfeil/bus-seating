@@ -38,8 +38,9 @@ describe('SeatingGraphComponent', () => {
     fixture.detectChanges();
     tick();
 
+    // 2 group nodes + 1 legend circle (instructor marker)
     const circles = fixture.nativeElement.querySelectorAll('circle');
-    expect(circles.length).toBe(2);
+    expect(circles.length).toBe(3);
   }));
 
   it('should render preference links', fakeAsync(() => {
