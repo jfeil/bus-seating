@@ -76,8 +76,8 @@ describe('SeatingPlanComponent', () => {
   it('should render bus cards', () => {
     const fixture = TestBed.createComponent(SeatingPlanComponent);
     fixture.componentInstance.plan = [
-      makePlan([{ name: 'G1', members: 3 }]),
-      makePlan([{ name: 'G2', members: 2, isInstructor: true }]),
+      makePlan([{ name: 'G1', members: 3 }], 50, 0, 'A', 'b1'),
+      makePlan([{ name: 'G2', members: 2, isInstructor: true }], 50, 0, 'B', 'b2'),
     ];
     fixture.detectChanges();
 

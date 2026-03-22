@@ -10,6 +10,7 @@
     "devUrl": "http://localhost:4200"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Bus Seating Planner",

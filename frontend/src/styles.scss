@@ -91,6 +91,14 @@ body { font-family: Roboto, "Helvetica Neue", sans-serif; }
   color: var(--text-secondary);
 }
 
+// Error snackbar
+.error-snackbar .mdc-snackbar__surface {
+  background-color: #d32f2f !important;
+}
+.error-snackbar .mdc-snackbar__label {
+  color: #fff !important;
+}
+
 // Scrollbar styling for dark mode
 .dark-theme {
   ::-webkit-scrollbar {

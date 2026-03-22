@@ -9,7 +9,33 @@ permissions:
   contents: write
 
 jobs:
+  # Determine the version tag for this build
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      release_name: ${{ steps.version.outputs.release_name }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          BASE_VERSION=$(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | head -1 | cut -d'"' -f4)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "release_name=Bus Seating Planner ${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            DEV_TAG="v${BASE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+            echo "tag=${DEV_TAG}" >> "$GITHUB_OUTPUT"
+            echo "release_name=Dev Build ${DEV_TAG}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: version
     strategy:
       fail-fast: false
       matrix:
@@ -32,7 +58,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
       # --- Rust ---
       - uses: dtolnay/rust-toolchain@stable
@@ -51,7 +77,6 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: cd frontend && npm ci
-      - run: npm install -g @tauri-apps/cli@latest
 
       # --- Python backend (PyInstaller) ---
       - uses: astral-sh/setup-uv@v5
@@ -62,7 +87,6 @@ jobs:
           uv sync
           uv pip install pyinstaller
 
-          # PyInstaller --add-data separator differs per OS
           if [ "$RUNNER_OS" = "Windows" ]; then
             SEP=";"
           else
@@ -86,6 +110,7 @@ jobs:
             --hidden-import app.main \
             --collect-submodules app \
             run_backend.py
+
           mkdir -p src-tauri/binaries
           if [ "$RUNNER_OS" = "Windows" ]; then
             cp dist/backend.exe "src-tauri/binaries/backend-${{ matrix.target }}.exe"
@@ -93,63 +118,36 @@ jobs:
             cp dist/backend "src-tauri/binaries/backend-${{ matrix.target }}"
           fi
 
-      # --- Build Tauri app ---
+      # --- Build Tauri app and publish release ---
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --target ${{ matrix.target }}
-          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('Bus Seating Planner {0}', github.ref_name) || '' }}
-          releaseBody: ${{ startsWith(github.ref, 'refs/tags/v') && 'See the changelog for details.' || '' }}
+          tagName: ${{ needs.version.outputs.tag }}
+          releaseName: ${{ needs.version.outputs.release_name }}
+          releaseBody: "Automated build from commit ${{ github.sha }}"
           releaseDraft: false
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
 
-      # --- Upload dev build artifacts (non-tag pushes) ---
-      - name: Upload AppImage
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'ubuntu-22.04' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bus-seating-AppImage
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-          retention-days: 7
+  # Clean up old dev prereleases (keep last 5)
+  cleanup:
+    needs: [version, build]
+    if: needs.version.outputs.prerelease == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Upload deb
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'ubuntu-22.04' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bus-seating-deb
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
-          retention-days: 7
-
-      - name: Upload rpm
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'ubuntu-22.04' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bus-seating-rpm
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
-          retention-days: 7
-
-      - name: Upload dmg
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && contains(matrix.platform, 'macos') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bus-seating-dmg-${{ matrix.target }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-          retention-days: 7
-
-      - name: Upload Windows installer
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'windows-latest' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bus-seating-windows-msi
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
-          retention-days: 7
-
-      - name: Upload Windows NSIS installer
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'windows-latest' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bus-seating-windows-nsis
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
-          retention-days: 7
+      - name: Delete old dev releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release list --json tagName,isPrerelease --limit 50 | \
+            jq -r '.[] | select(.isPrerelease) | .tagName' | \
+            grep '^v.*-dev\.' | \
+            sort -t. -k4 -n -r | \
+            tail -n +6 | \
+            while read -r tag; do
+              echo "Deleting old dev release: $tag"
+              gh release delete "$tag" --yes --cleanup-tag || true
+            done

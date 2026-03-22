@@ -9,7 +9,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private base = (window as any).__TAURI__ ? 'http://127.0.0.1:8000/api' : '/api';
+  private get base(): string {
+    if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
+      const port = (window as any).__BACKEND_PORT__ || 8000;
+      return `http://127.0.0.1:${port}/api`;
+    }
+    return '/api';
+  }
 
   constructor(private http: HttpClient) {}
 
