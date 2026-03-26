@@ -2,6 +2,15 @@ from pydantic import BaseModel, Field
 
 
 class ConstraintConfigRead(BaseModel):
+    bus_name_prefix: str
+    default_bus_capacity: int
+    default_reserved_seats: int
+    label_freifahrer: str
+    icon_freifahrer: str
+    label_skikurs: str
+    icon_skikurs: str
+    label_lehrteam: str
+    icon_lehrteam: str
     instructor_consistency: float
     passenger_consistency: float
     ride_together: float
@@ -11,6 +20,15 @@ class ConstraintConfigRead(BaseModel):
 
 
 class ConstraintConfigUpdate(BaseModel):
+    bus_name_prefix: str | None = None
+    default_bus_capacity: int | None = Field(gt=0, default=None)
+    default_reserved_seats: int | None = Field(ge=0, default=None)
+    label_freifahrer: str | None = None
+    icon_freifahrer: str | None = None
+    label_skikurs: str | None = None
+    icon_skikurs: str | None = None
+    label_lehrteam: str | None = None
+    icon_lehrteam: str | None = None
     instructor_consistency: float | None = Field(ge=0, default=None)
     passenger_consistency: float | None = Field(ge=0, default=None)
     ride_together: float | None = Field(ge=0, default=None)

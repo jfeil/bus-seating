@@ -77,6 +77,15 @@ interface WeightSlider {
 export class ConstraintConfigComponent implements OnInit {
   seasonId = '';
   config = signal<ConstraintConfig>({
+    bus_name_prefix: 'Bus',
+    default_bus_capacity: 50,
+    default_reserved_seats: 0,
+    label_freifahrer: 'Freifahrer',
+    icon_freifahrer: '',
+    label_skikurs: 'Skikurs',
+    icon_skikurs: 'downhill_skiing',
+    label_lehrteam: 'Lehrteam',
+    icon_lehrteam: 'school',
     instructor_consistency: 100,
     passenger_consistency: 50,
     ride_together: 10,
@@ -140,6 +149,15 @@ export class ConstraintConfigComponent implements OnInit {
 
   resetDefaults() {
     const defaults: ConstraintConfig = {
+      bus_name_prefix: 'Bus',
+      default_bus_capacity: 50,
+      default_reserved_seats: 0,
+      label_freifahrer: 'Freifahrer',
+      icon_freifahrer: '',
+      label_skikurs: 'Skikurs',
+      icon_skikurs: 'downhill_skiing',
+      label_lehrteam: 'Lehrteam',
+      icon_lehrteam: 'school',
       instructor_consistency: 100,
       passenger_consistency: 50,
       ride_together: 10,

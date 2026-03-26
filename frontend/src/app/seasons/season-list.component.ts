@@ -86,9 +86,9 @@ export class SeasonListComponent implements OnInit {
     if (!name || this.submitting) return;
     this.submitting = true;
     this.api.createSeason(name).subscribe({
-      next: () => {
+      next: (season) => {
         this.newName = '';
-        this.load();
+        this.router.navigate(['/seasons', season.id, 'settings']);
       },
       complete: () => this.submitting = false,
       error: () => this.submitting = false,

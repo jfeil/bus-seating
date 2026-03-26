@@ -1,7 +1,8 @@
 import { Component, Input, OnChanges, OnDestroy, ElementRef, ViewChild, AfterViewInit, SimpleChanges, effect } from '@angular/core';
 import * as d3 from 'd3';
-import { Group, Bus, SeatingPlanEntry, RidePreference, PERSON_TYPE_CONFIG } from '../core/models';
+import { Group, Bus, SeatingPlanEntry, RidePreference } from '../core/models';
 import { ThemeService } from '../core/theme.service';
+import { SeasonConfigService } from '../core/season-config.service';
 
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
@@ -52,7 +53,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges, OnDestro
   private resizeObserver: ResizeObserver | null = null;
   private lastRenderedHeight = 0;
 
-  constructor(private theme: ThemeService) {
+  constructor(private theme: ThemeService, private seasonConfig: SeasonConfigService) {
     effect(() => {
       this.theme.isDark(); // track signal
       if (this.initialized) {
@@ -267,7 +268,7 @@ export class SeatingGraphComponent implements AfterViewInit, OnChanges, OnDestro
         id: g.id,
         label: g.name,
         size: planInfo ? planInfo.size : g.members.length,
-        isInstructor: planInfo ? planInfo.isInstructor : g.members.some(m => PERSON_TYPE_CONFIG[m.person_type].isInstructorLike),
+        isInstructor: planInfo ? planInfo.isInstructor : g.members.some(m => this.seasonConfig.getPersonTypeInfo(m.person_type).isInstructorLike),
       };
     });
   }

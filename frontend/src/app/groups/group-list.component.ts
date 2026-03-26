@@ -14,6 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { ApiService } from '../core/api.service';
+import { SeasonConfigService } from '../core/season-config.service';
 import {
   Group,
   Person,
@@ -23,7 +24,6 @@ import {
   RidePreference,
   PersonPreference,
   PersonAbsence,
-  PERSON_TYPE_CONFIG,
   PERSON_TYPE_OPTIONS,
 } from '../core/models';
 
@@ -607,16 +607,17 @@ export class GroupListComponent implements OnInit {
   readonly personTypeOptions = PERSON_TYPE_OPTIONS;
 
   personTypeLabel(type: PersonType): string {
-    return PERSON_TYPE_CONFIG[type].label;
+    return this.seasonConfig.getLabel(type);
   }
 
   personTypeIcon(type: PersonType): string | null {
-    return PERSON_TYPE_CONFIG[type].icon;
+    return this.seasonConfig.getIcon(type);
   }
 
   constructor(
     private api: ApiService,
     private route: ActivatedRoute,
+    private seasonConfig: SeasonConfigService,
   ) {}
 
   ngOnInit() {

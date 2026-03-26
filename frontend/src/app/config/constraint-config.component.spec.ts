@@ -30,6 +30,8 @@ describe('ConstraintConfigComponent', () => {
     fixture.detectChanges();
 
     httpMock.expectOne('/api/seasons/s1/config').flush({
+      default_bus_capacity: 50,
+      default_reserved_seats: 0,
       instructor_consistency: 100,
       passenger_consistency: 50,
       ride_together: 10,
@@ -57,6 +59,7 @@ describe('ConstraintConfigComponent', () => {
     const fixture = TestBed.createComponent(ConstraintConfigComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/seasons/s1/config').flush({
+      default_bus_capacity: 50, default_reserved_seats: 0,
       instructor_consistency: 100, passenger_consistency: 50,
       ride_together: 10, instructor_distribution: 75,
     });
@@ -76,6 +79,7 @@ describe('ConstraintConfigComponent', () => {
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ ride_together: 60 });
     req.flush({
+      default_bus_capacity: 50, default_reserved_seats: 0,
       instructor_consistency: 100, passenger_consistency: 50,
       ride_together: 60, instructor_distribution: 75,
     });
@@ -88,6 +92,7 @@ describe('ConstraintConfigComponent', () => {
     const fixture = TestBed.createComponent(ConstraintConfigComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/seasons/s1/config').flush({
+      default_bus_capacity: 50, default_reserved_seats: 0,
       instructor_consistency: 200, passenger_consistency: 80,
       ride_together: 50, instructor_distribution: 120,
     });
@@ -101,6 +106,7 @@ describe('ConstraintConfigComponent', () => {
     expect(req.request.body.ride_together).toBe(10);
     expect(req.request.body.instructor_distribution).toBe(75);
     req.flush({
+      default_bus_capacity: 50, default_reserved_seats: 0,
       instructor_consistency: 100, passenger_consistency: 50,
       ride_together: 10, instructor_distribution: 75,
     });

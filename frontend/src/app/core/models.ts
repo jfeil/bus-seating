@@ -93,6 +93,15 @@ export interface PersonAbsence {
 }
 
 export interface ConstraintConfig {
+  bus_name_prefix: string;
+  default_bus_capacity: number;
+  default_reserved_seats: number;
+  label_freifahrer: string;
+  icon_freifahrer: string;
+  label_skikurs: string;
+  icon_skikurs: string;
+  label_lehrteam: string;
+  icon_lehrteam: string;
   instructor_consistency: number;
   passenger_consistency: number;
   ride_together: number;

@@ -5,8 +5,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { SeatingPlanEntry, SeatingPlanGroup, PERSON_TYPE_CONFIG, PersonType } from '../core/models';
+import { SeatingPlanEntry, SeatingPlanGroup, PersonType } from '../core/models';
 import { ApiService } from '../core/api.service';
+import { SeasonConfigService } from '../core/season-config.service';
 
 @Component({
   selector: 'app-seating-plan',
@@ -90,10 +91,10 @@ export class SeatingPlanComponent {
   @Input() dayId = '';
   @Output() assignmentChanged = new EventEmitter<void>();
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private seasonConfig: SeasonConfigService) {}
 
   personTypeIcon(type: PersonType): string | null {
-    return PERSON_TYPE_CONFIG[type].icon;
+    return this.seasonConfig.getIcon(type);
   }
 
   sortedGroups(groups: SeatingPlanGroup[]): SeatingPlanGroup[] {

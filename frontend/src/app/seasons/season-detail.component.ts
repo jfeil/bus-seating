@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ThemeService } from '../core/theme.service';
+import { ApiService } from '../core/api.service';
+import { SeasonConfigService } from '../core/season-config.service';
 
 @Component({
   selector: 'app-season-detail',
@@ -35,13 +37,16 @@ import { ThemeService } from '../core/theme.service';
             <mat-icon matListItemIcon>calendar_today</mat-icon>
             <span matListItemTitle>Days & Buses</span>
           </a>
-          <a mat-list-item routerLink="config" routerLinkActive="active-link">
-            <mat-icon matListItemIcon>tune</mat-icon>
-            <span matListItemTitle>Solver Config</span>
-          </a>
           <a mat-list-item routerLink="solve" routerLinkActive="active-link">
             <mat-icon matListItemIcon>auto_fix_high</mat-icon>
             <span matListItemTitle>Solve & Results</span>
+          </a>
+        </mat-nav-list>
+        <div class="sidenav-spacer"></div>
+        <mat-nav-list>
+          <a mat-list-item routerLink="settings" routerLinkActive="active-link">
+            <mat-icon matListItemIcon>settings</mat-icon>
+            <span matListItemTitle>Settings</span>
           </a>
         </mat-nav-list>
       </mat-sidenav>
@@ -56,11 +61,22 @@ import { ThemeService } from '../core/theme.service';
   styles: [`
     :host { display: flex; flex-direction: column; height: 100vh; }
     mat-sidenav-container { flex: 1; }
-    .sidenav { width: 220px; }
+    .sidenav { width: 220px; display: flex; flex-direction: column; }
+    .sidenav-spacer { flex: 1; }
     .content { padding: 1.5rem; }
     .toolbar-spacer { flex: 1; }
   `],
 })
-export class SeasonDetailComponent {
-  constructor(public theme: ThemeService) {}
+export class SeasonDetailComponent implements OnInit {
+  constructor(
+    public theme: ThemeService,
+    private api: ApiService,
+    private route: ActivatedRoute,
+    private seasonConfig: SeasonConfigService,
+  ) {}
+
+  ngOnInit() {
+    const seasonId = this.route.snapshot.params['seasonId'];
+    this.api.getConfig(seasonId).subscribe(c => this.seasonConfig.update(c));
+  }
 }

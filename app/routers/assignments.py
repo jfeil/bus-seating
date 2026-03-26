@@ -33,6 +33,15 @@ def get_config(season_id: str, db: Session = Depends(get_db)):
     )
     if not config:
         return ConstraintConfigRead(
+            bus_name_prefix="Bus",
+            default_bus_capacity=50,
+            default_reserved_seats=0,
+            label_freifahrer="Freifahrer",
+            icon_freifahrer="",
+            label_skikurs="Skikurs",
+            icon_skikurs="downhill_skiing",
+            label_lehrteam="Lehrteam",
+            icon_lehrteam="school",
             instructor_consistency=100.0,
             passenger_consistency=50.0,
             ride_together=10.0,
@@ -50,6 +59,16 @@ def update_config(season_id: str, body: ConstraintConfigUpdate, db: Session = De
         config = ConstraintConfig(season_id=season_id)
         db.add(config)
 
+    if body.bus_name_prefix is not None:
+        config.bus_name_prefix = body.bus_name_prefix
+    if body.default_bus_capacity is not None:
+        config.default_bus_capacity = body.default_bus_capacity
+    if body.default_reserved_seats is not None:
+        config.default_reserved_seats = body.default_reserved_seats
+    for field in ('label_freifahrer', 'icon_freifahrer', 'label_skikurs', 'icon_skikurs', 'label_lehrteam', 'icon_lehrteam'):
+        val = getattr(body, field)
+        if val is not None:
+            setattr(config, field, val)
     if body.instructor_consistency is not None:
         config.instructor_consistency = body.instructor_consistency
     if body.passenger_consistency is not None:
